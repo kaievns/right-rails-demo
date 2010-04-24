@@ -2,11 +2,17 @@ class CategoriesController < ApplicationController
   # GET /categories
   # GET /categories.xml
   def index
-    @categories = Category.all
+    @categories = Category.all({
+      :conditions => params[:search].blank? ? nil :
+      ["name LIKE ?", "#{params[:search]}%"]
+    })
 
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @categories }
+      format.js   {
+        render :inline => "<%= autocomplete_result @categories, :name %>"
+      }
     end
   end
 

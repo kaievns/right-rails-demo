@@ -110,12 +110,12 @@ var RR = {
   remove: function(id) {
     var element = $(id);
     if (element) {
-      var remove_element = element.remove.bind(element).chain(Lightbox.rescan);
+      var remove_element = element.remove.bind(element);
       
       if (this.Options.removeFx) {
         element.hide(this.Options.removeFx, {onFinish: remove_element});
       } else {
-        remove_element;
+        remove_element();
       }
     }
   },
@@ -178,7 +178,7 @@ var RR = {
         event.stop();
         Xhr.load(link.href + '.' + this.Options.format);
         
-      } else if (link.match(this.Options.linkToAjaxDelete) && link.has('onclick')) {alert('fuck')
+      } else if (link.match(this.Options.linkToAjaxDelete) && link.has('onclick')) {
         event.stop();
         eval('({f:'+ link.onclick.toString().replace('.submit', '.send')+'})').f.call(link);
       }

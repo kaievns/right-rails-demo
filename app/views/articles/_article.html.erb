@@ -1,0 +1,30 @@
+<% div_for article do %>
+  <h2><%=h article.name %></h2>
+  
+  <div class="text"><%= simple_format article.text %></div>
+  
+  <div class="meta">
+    <div class="published_at">
+      <label>Published:</label>
+      <%= article.published_at %>
+    </div>
+    <div class="category">
+      <label>Category:</label>
+      <%= link_to article.category_name, article.category %>
+    </div>
+    <div class="rate">
+      <label>Rating:</label>
+      <%= rater_display(article.rating) %>
+    </div>
+    <div class="comp">
+      <label>Complete:</label>
+      <%= article.completeness %>%
+    </div>
+  </div>
+  
+  <div class="actions">
+    <%= link_to "Show", article %> |
+    <%= link_to "Edit", edit_article_path(article), :class => :edit %> |
+    <%= link_to "Delete", article, :confirm => "Are you sure?", :method => :delete, :class => :delete %>
+  </div>
+<% end -%>

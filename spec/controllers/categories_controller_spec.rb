@@ -8,7 +8,7 @@ describe CategoriesController do
 
   describe "GET index" do
     it "assigns all categories as @categories" do
-      Category.stub(:find).with(:all).and_return([mock_category])
+      Category.stub(:find).with(:all, anything).and_return([mock_category])
       get :index
       assigns[:categories].should == [mock_category]
     end

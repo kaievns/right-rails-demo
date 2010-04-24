@@ -1,0 +1,34 @@
+<% form_for(@article) do |f| %>
+  <%= f.error_messages %>
+  
+  <p class="required">
+    <%= f.label :name %>
+    <%= f.text_field :name %>
+  </p>
+  <p class="required">
+    <%= f.label :text %>
+    <%= f.text_area :text, :rows => 8, :cols => 60 %>
+  </p>
+  <p class="required">
+    <%= f.label :published_at %>
+    <%= f.calendar_field :published_at, :hide_on_pick => true %>
+  </p>
+  <p class="required">
+    <%= f.label :category_name %>
+    <%= f.autocomplete_field :category_name, :url => categories_path(:format => :js) %>
+  </p>
+  <p>
+    <%= f.label :rating %>
+    <%= f.rater :rating %>
+  </p>
+  <p>
+    <%= f.label :completeness %>
+    <%= f.slider :completeness, :update => 'slider-display' %><span id="slider-display"></span>%
+  </p>
+  
+  <p class="buttons">
+    <%= f.submit f.object.new_record? ? 'Create' : 'Update' %>
+  </p>
+  
+  
+<% end -%>

@@ -21,10 +21,10 @@ a:hover {
   color: #DE4200;
   text-decoration: underline;
 }
-a.ajax_edit {
+a.edit {
   color: green;
 }
-a.ajax_destroy {
+a.delete {
   color: red;
 }
 
@@ -243,4 +243,23 @@ div.actions {
   z-index: 99999;
   -webkit-box-shadow: #666 .2em .2em .8em;
   -moz-box-shadow: #666 .2em .2em .8em;
+}
+
+/* Articles stylesheet */
+div.text {
+  background: #FFF;
+  margin: 1em 0;
+  padding: 0 1em;
+  border: 1px solid #AAA;
+  -webkit-border-radius: .3em;
+  -moz-border-radius: .3em; 
+}
+div.article div.meta label {
+  font-weight: bold;
+  font-family: "Trebuchet MS", Garuda, sans-serif;
+  display: inline-block;
+  *display: inline;
+  *zoom: 1;
+  width: 6em;
+  margin-bottom: .4em;
 }

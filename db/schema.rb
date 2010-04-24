@@ -9,7 +9,18 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20100424105057) do
+ActiveRecord::Schema.define(:version => 20100424132728) do
+
+  create_table "articles", :force => true do |t|
+    t.string   "name"
+    t.date     "published_at"
+    t.integer  "category_id"
+    t.integer  "rating",       :default => 0
+    t.integer  "completeness", :default => 0
+    t.text     "text"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
 
   create_table "categories", :force => true do |t|
     t.string   "name"

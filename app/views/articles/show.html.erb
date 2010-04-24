@@ -1,0 +1,36 @@
+<h1>Article details</h1>
+
+<p>
+  <b>Name:</b>
+  <%=h @article.name %>
+</p>
+
+<p>
+  <b>Text:</b>
+  <div class="text"><%=simple_format @article.text %></div>
+</p>
+
+<p>
+  <b>Category:</b>
+  <%=h @article.category_name %>
+</p>
+
+<p>
+  <b>Published At:</b>
+  <%= @article.published_at %>
+</p>
+
+<p>
+  <b>Rating:</b>
+  <%= rater_display @article.rating %>
+</p>
+
+<p>
+  <b>Complete:</b>
+  <%=h @article.completeness %>%
+</p>
+
+<div class="bottom-links">
+  <%= link_to 'Edit', edit_article_path(@article), :class => :edit %> |
+  <%= link_to 'Back', articles_path %>
+</div>
