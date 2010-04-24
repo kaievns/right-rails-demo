@@ -1,0 +1,18 @@
+<% form_for(@picture, :html => {:multipart => true}) do |f| -%>
+  <%= f.error_messages %>
+  
+  <p class="required">
+    <%= f.label :name %>
+    <%= f.text_field :name %>
+  </p>
+  <p class="required">
+    <%= f.label :image %>
+    <%= f.file_field :image %>
+  </p>
+  
+  <p class="buttons">
+    <%= f.submit @picture.new_record? ? "Create" : "Save" %>
+    <%= link_to_function 'Cancel', "$(this).parent('form').remove();" if params[:format] == 'js' %>
+    <%= image_tag 'spinner.gif', :class => :spinner %>
+  </p>
+<% end -%>

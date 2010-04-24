@@ -1,0 +1,183 @@
+html, body {
+  background: #F8F6F0;
+  font-family: Verdana, Helvetica, sans-serif;
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: normal;
+  font-family: "Trebuchet MS", Garuda, sans-serif;
+  color: #7A5E44;
+}
+a {
+  color: #DE4200;
+  text-decoration: none;
+}
+a:hover {
+  background: none;
+  color: #DE4200;
+  text-decoration: underline;
+}
+
+/* Layout styles */
+#body {
+  min-height: 100%;
+}
+#head, #main, #foot {
+  padding: 1em 10em;
+  margin: 0;
+}
+#head {
+  background: #453A31;
+  border-bottom: 7px solid #846E5D;
+}
+#head a {
+  margin: 0;
+  display: block;
+  font-size: 320%;
+  color: #F8F6F0;
+}
+#main {
+  padding-bottom: 4em;
+}
+#sidebar {
+  float: right;
+  width: 14em;
+}
+#info {
+  margin-right: 15em;
+}
+#foot {
+  background: #612B14;
+  color: #C7B293;
+  float: left;
+  height: 3em;
+  line-height: 3em;
+  margin-top: -3em;
+  width: 100%;
+  padding: 0;
+}
+#foot #copy {
+  padding: 0 10em;
+}
+
+/* The main menu styles */
+ul#main-menu {
+  
+}
+ul#main-menu li.current {
+  font-weight: bold;
+  list-style: circle;
+}
+
+/* The flashes block styles */
+#flashes {
+  margin: 0;
+  padding: 0;
+}
+#flashes div {
+  border: 1px solid #fff;
+  padding: 0.5em 26px;
+  margin: 1em 0em;
+}
+#flashes .notice {
+  color: #386d19;
+  border-color: #a2d399;
+  background-color: #c7e5c2;
+}
+#flashes .warning {
+  color: #675918;
+  border-color: #e0d182;
+  background-color: #eae1b1;
+}
+#flashes .error {
+  color: #ae2727;
+  border-color: #cf9e9e;
+  background-color: #e2c5c5;
+}
+
+/* Form basic styles */
+form {
+  margin-top: 0.5em;
+  padding: 0 1em;
+  background: white;
+  border: 1px solid #AAA;
+  -webkit-border-radius: .3em;
+  -moz-border-radius: .3em;
+}
+form #errorExplanation {
+  margin-top: 1em;
+}
+
+form label {
+  display: block;
+  font-weight: bold;
+  font-family: "Trebuchet MS", Garuda, sans-serif;
+}
+
+form p.required label:after {
+  content: '*';
+  color: red;
+  margin-left: .5em;
+}
+
+form p.buttons {
+  margin-top: 1.5em;
+}
+
+img.spinner {
+  display: none;
+}
+
+div.bottom-links {
+  margin-top: 1.5em;
+}
+
+div.actions {
+  margin-top: .5em;
+}
+
+#instant-form-block {
+  display: none;
+}
+
+/* The Pictures Maintenance Styles */
+#pictures div.picture {
+  display: inline-block;
+  *display: inline;
+  *zoom: 1;
+  vertical-align: top;
+  margin-right: 2em;
+  margin-bottom: 1em;
+  position: relative;
+}
+#pictures div.picture div.name {
+  font-weight: bold;
+  font-family: "Trebuchet MS", Garuda, sans-serif;
+  color: #222;
+}
+#pictures div.picture div.image {
+  margin-top: .2em;
+  height: 160px;
+  width: 210px;
+}
+#pictures div.picture div.image a {
+  border: none;
+}
+#pictures div.picture div.image a img {
+  border: 1px solid #AAA;
+  padding: .3em;
+  -webkit-border-radius: .3em;
+  -moz-border-radius: .3em;
+}
+#pictures div.picture form.edit_picture {
+  position: absolute;
+  top: .5em;
+  left: .5em;
+  z-index: 99999;
+  -webkit-box-shadow: #666 .2em .2em .8em;
+  -moz-box-shadow: #666 .2em .2em .8em;
+}

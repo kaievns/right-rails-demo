@@ -1,0 +1,11 @@
+<% div_for picture do %>
+  <div class="name"><%= picture.name %></div>
+  <div class="image">
+    <%= link_to_lightbox image_tag(picture.image.url(:thmb)), picture.image.url(:medium), :roadtrip => true %>
+  </div>
+  <div class="actions">
+    <%= link_to 'Show', picture %> |
+    <%= link_to 'Edit', edit_picture_path(picture), :class => :ajax_edit %> |
+    <%= link_to 'Destroy', picture, :confirm => 'Are you sure?', :method => :delete, :class => :ajax_destroy %>
+  </div>
+<% end -%>

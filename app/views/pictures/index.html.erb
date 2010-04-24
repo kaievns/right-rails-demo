@@ -1,0 +1,15 @@
+<h1>Listing pictures</h1>
+
+<div id="pictures">
+  <%= render @pictures %>
+</div>
+
+<div class="bottom-links">
+  <%= link_to 'New picture', new_picture_path, :onclick => "$('instant-form-block').toggle('slide'); return false" %>
+</div>
+
+<div id="instant-form-block">
+  <% @picture = Picture.new %>
+  <%= render 'form' %>
+  <%= rjs_tag{ |page| page.RR.remotize_form('new_picture') } %>
+</div>
