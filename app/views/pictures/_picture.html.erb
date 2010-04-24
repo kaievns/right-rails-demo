@@ -5,7 +5,7 @@
   </div>
   <div class="actions">
     <%= link_to 'Show', picture %> |
-    <%= link_to 'Edit', edit_picture_path(picture), :class => :ajax_edit %> |
-    <%= link_to 'Destroy', picture, :confirm => 'Are you sure?', :method => :delete, :class => :ajax_destroy %>
+    <%= link_to_remote_edit picture %> |
+    <%= link_to_remote_destroy picture %>
   </div>
 <% end -%>
