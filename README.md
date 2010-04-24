@@ -18,6 +18,12 @@ Run the migrations
 
 And you're good to go!
 
+## Versions
+
+See also the list of branches of the project, there are some other versions of the demo
+
+    git branch
+
 
 ## License
 
