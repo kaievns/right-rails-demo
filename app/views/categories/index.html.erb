@@ -1,0 +1,15 @@
+<h1>Listing categories</h1>
+
+<ul id="categories">
+  <%= render @categories %>
+</ul>
+
+<div class="bottom-links">
+  <%= link_to 'New category', new_category_path, :onclick => "$('instant-form-block').toggle('slide'); return false" %>
+</div>
+
+<div id="instant-form-block">
+  <% @category = Category.new %>
+  <%= render 'form' %>
+  <%= rjs_tag{ |page| page.RR.remotize_form('new_category') } %>
+</div>

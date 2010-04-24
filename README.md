@@ -4,9 +4,9 @@ This is a simple demo application for the [RightRails](http://github.com/MadRabb
 
 ## Installation
 
-To make it working you'll need to install two gems `paperclip` and `right-rails`
+To make it working you'll need to install two gems `right-rails` and `paperclip`
 
-    sudo gem install paperclip right-rails
+    sudo gem install right-rails paperclip
 
 After that clone the project
 

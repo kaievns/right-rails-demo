@@ -1,13 +1,9 @@
-<% form_for(@picture, :html => {:multipart => true}) do |f| -%>
+<% form_for(@category) do |f| %>
   <%= f.error_messages %>
   
   <p class="required">
     <%= f.label :name %>
     <%= f.text_field :name %>
-  </p>
-  <p class="required">
-    <%= f.label :image %>
-    <%= f.file_field :image %>
   </p>
   
   <p class="buttons">

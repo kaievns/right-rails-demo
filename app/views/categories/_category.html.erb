@@ -1,0 +1,7 @@
+<% content_tag_for :li, category do %>
+  <div class="name"><%=h category.name %></div>
+  <div class="actions">
+    <%= link_to 'Edit', edit_category_path(category), :class => :ajax_edit %> |
+    <%= link_to 'Destroy', category, :confirm => 'Are you sure?', :method => :delete, :class => :ajax_destroy %>
+  </div>
+<% end -%>

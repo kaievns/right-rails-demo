@@ -178,7 +178,7 @@ var RR = {
         event.stop();
         Xhr.load(link.href + '.' + this.Options.format);
         
-      } else if (link.match(this.Options.linkToAjaxDelete) && link.has('onclick')) {
+      } else if (link.match(this.Options.linkToAjaxDelete) && link.has('onclick')) {alert('fuck')
         event.stop();
         eval('({f:'+ link.onclick.toString().replace('.submit', '.send')+'})').f.call(link);
       }

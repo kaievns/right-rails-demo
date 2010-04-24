@@ -21,6 +21,12 @@ a:hover {
   color: #DE4200;
   text-decoration: underline;
 }
+a.ajax_edit {
+  color: green;
+}
+a.ajax_destroy {
+  color: red;
+}
 
 /* Layout styles */
 #body {
@@ -142,6 +148,63 @@ div.actions {
 
 #instant-form-block {
   display: none;
+}
+
+/* Scaffold styles */
+.fieldWithErrors {
+  padding: 2px;
+  background-color: #E44;
+  display: table;
+}
+
+#errorExplanation {
+  width: 400px;
+  border: 2px solid #E44;
+  padding: 7px;
+  padding-top: 0;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  background-color: #f0f0f0;
+  -webkit-border-radius: .25em;
+  -moz-border-radius: .25em;
+}
+
+#errorExplanation h2 {
+  display: none;
+}
+
+#errorExplanation p {
+  color: #333;
+  margin-bottom: 0;
+  padding: 5px;
+}
+
+#errorExplanation ul li {
+  font-size: 12px;
+  list-style: square;
+}
+
+/* The Categories Maintenance Styles */
+#categories li.category {
+  margin-bottom: .2em;
+  position: relative;
+}
+#categories li.category div.name {
+  display: inline-block;
+  *display: inline;
+  *zoom: 1;
+  width: 20em;
+}
+#categories li.category div.actions {
+  display: inline;
+}
+#categories li.category form.edit_category {
+  position: absolute;
+  top: -0.5em;
+  left: -.5em;
+  z-index: 9999;
+  -webkit-box-shadow: #666 .2em .2em .8em;
+  -moz-box-shadow: #666 .2em .2em .8em;
 }
 
 /* The Pictures Maintenance Styles */
