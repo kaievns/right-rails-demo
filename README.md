@@ -10,7 +10,7 @@ To make it working you'll need to install two gems `right-rails` and `paperclip`
 
 After that clone the project
 
-    git clone git://github.com/MadRabbit/right-rails.git
+    git clone git://github.com/MadRabbit/right-rails-demo.git
 
 Run the migrations
 
