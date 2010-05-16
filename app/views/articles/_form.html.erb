@@ -7,7 +7,9 @@
   </p>
   <p class="required">
     <%= f.label :text %>
-    <%= f.text_area :text, :rows => 8, :cols => 60 %>
+    <% resizable :class => 'textarea-resizable', :direction => 'bottom' do %>
+      <%= f.text_area :text, :rows => 8, :cols => 60 %>
+    <% end %>
   </p>
   <p class="required">
     <%= f.label :published_at %>
@@ -17,6 +19,10 @@
     <%= f.label :category_name %>
     <%= f.autocomplete_field :category_name, :url => categories_path(:format => :js) %>
   </p>
+  <p class="required">
+    <%= f.label :marker_color %>
+    <%= f.colorpicker_field :marker_color %>
+  </p>
   <p>
     <%= f.label :rating %>
     <%= f.rater :rating %>
@@ -25,6 +31,7 @@
     <%= f.label :completeness %>
     <%= f.slider :completeness, :update => 'slider-display' %><span id="slider-display"></span>%
   </p>
+  
   
   <p class="buttons">
     <%= f.submit f.object.new_record? ? 'Create' : 'Update' %>

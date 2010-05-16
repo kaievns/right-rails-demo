@@ -4,6 +4,7 @@ class Article < ActiveRecord::Base
   validates_presence_of     :category_name, :name, :text, :published_at
   validates_numericality_of :rating, :in => 1..5
   validates_numericality_of :completeness, :in => 0..100
+  validates_format_of       :marker_color, :with => /^#[0-9a-f]{6}$/i, :message => 'should be a HEX value'
   
   def category_name
     category.name if category

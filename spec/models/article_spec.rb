@@ -8,7 +8,8 @@ describe Article do
       :category_name => "value for category",
       :rating => 1,
       :completeness => 1,
-      :text => "value for text"
+      :text => "value for text",
+      :marker_color => '#FFFFFF'
     }
   end
 

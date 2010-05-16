@@ -30,6 +30,13 @@
   <%=h @article.completeness %>%
 </p>
 
+<p>
+  <div>
+    <b>Marker:</b>
+    <div class="marker" style="background-color: <%= @article.marker_color %>"></div>
+  </div>
+</p>
+
 <div class="bottom-links">
   <%= link_to 'Edit', edit_article_path(@article), :class => :edit %> |
   <%= link_to 'Back', articles_path %>

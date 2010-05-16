@@ -246,7 +246,10 @@ div.actions {
 }
 
 /* Articles stylesheet */
-div.text {
+div.article {
+  margin-bottom: 3em;
+}
+div.article div.text {
   background: #FFF;
   margin: 1em 0;
   padding: 0 1em;
@@ -262,4 +265,29 @@ div.article div.meta label {
   *zoom: 1;
   width: 6em;
   margin-bottom: .4em;
+}
+div.marker {
+  height: 1em;
+  width: 2em;
+  display: inline-block;
+  *display: inline;
+  *zoom: 1;
+  vertical-align: middle;
+  border: 1px solid #BBB;
+  -webkit-border-radius: .3em;
+  -moz-border-radius: .3em;
+}
+
+/* The resizable textarea */
+form div.textarea-resizable {
+  width: 32em;
+  max-height: 20em;
+}
+form div.textarea-resizable div.right-resizable-content {
+  padding: 0;
+  overflow: hidden;
+}
+form div.textarea-resizable textarea {
+  height: 100%;
+  width: 100%;
 }

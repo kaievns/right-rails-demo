@@ -58,7 +58,7 @@ class CategoriesController < ApplicationController
         flash[:notice] = 'Category was successfully created.'
         format.html { redirect_to(@category) }
         format.xml  { render :xml => @category, :status => :created, :location => @category }
-        format.js   { render rjs.insert_and_care(@category) }
+        format.js   { render rjs.insert_and_care(@category, "top") }
       else
         format.html { render :action => "new" }
         format.xml  { render :xml => @category.errors, :status => :unprocessable_entity }
