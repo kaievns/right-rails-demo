@@ -1,4 +1,4 @@
-<% div_for picture do %>
+<%= div_for picture do %>
   <div class="name"><%= picture.name %></div>
   <div class="image">
     <%= link_to_lightbox image_tag(picture.image.url(:thmb)), picture.image.url(:medium), :roadtrip => true %>

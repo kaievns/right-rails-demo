@@ -3,7 +3,7 @@ module ApplicationHelper
   def menu_link_to(text, url, options={})
     content_tag :li,
       link_to(text, url, options),
-      :class => request.request_uri.starts_with?(url) ? :current : nil
+      :class => request.fullpath.starts_with?(url) ? :current : nil
   end
   
   def link_to_remote_edit(unit, options={})

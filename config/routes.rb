@@ -1,5 +1,5 @@
-ActionController::Routing::Routes.draw do |map|
-  map.resources :articles, :categories, :pictures
+RightRailsDemo::Application.routes.draw do
+  resources :articles, :categories, :pictures
   
-  map.root :controller => 'pages', :action => 'index'
+  root :controller => 'pages', :action => 'index'
 end

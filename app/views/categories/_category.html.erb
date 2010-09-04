@@ -1,4 +1,4 @@
-<% content_tag_for :li, category do %>
+<%= content_tag_for :li, category do %>
   <div class="name"><%=h category.name %></div>
   <div class="actions">
     <%= link_to_remote_edit category %> |

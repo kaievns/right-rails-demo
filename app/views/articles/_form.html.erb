@@ -1,4 +1,4 @@
-<% form_for(@article) do |f| %>
+<%= form_for(@article) do |f| %>
   <%= f.error_messages %>
   
   <p class="required">
@@ -7,7 +7,7 @@
   </p>
   <p class="required">
     <%= f.label :text %>
-    <% resizable :class => 'textarea-resizable', :direction => 'bottom' do %>
+    <%= resizable :class => 'textarea-resizable', :direction => 'bottom' do %>
       <%= f.text_area :text, :rows => 8, :cols => 60 %>
     <% end %>
   </p>

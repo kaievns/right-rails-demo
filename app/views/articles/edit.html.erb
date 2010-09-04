@@ -3,6 +3,6 @@
 <%= render 'form' %>
 
 <div class="bottom-links">
-  <%= link_to 'Show', @article %> |
-  <%= link_to 'Back', articles_path %>
+  <%= link_to 'Show', @article, :class => :show %> |
+  <%= link_to 'Back', articles_path, :class => :back %>
 </div>
