@@ -11,8 +11,8 @@ if (self.Calendar) {
   $ext(Calendar.i18n, {
     Done:           'Done',
     Now:            '今日',
-    Next:           '翌月',
-    Prev:           '前の月',
+    NextMonth:      '翌月',
+    PrevMonth:      '前の月',
     NextYear:       '翌年',
     PrevYear:       '前年',
 
@@ -26,16 +26,16 @@ if (self.Calendar) {
 
 if (self.Lightbox) {
   $ext(Lightbox.i18n, {
-    CloseTitle: '閉じる',
-    PrevTitle:  '前の画像',
-    NextTitle:  '次の画像'
+    Close: '閉じる',
+    Prev:  '前の画像',
+    Next:  '次の画像'
   });
 }
 
 if (self.InEdit) {
   $ext(InEdit.i18n, {
-    save:   "保存",
-    cancel: "キャンセル"
+    Save:   "保存",
+    Cancel: "キャンセル"
   });
 }
 

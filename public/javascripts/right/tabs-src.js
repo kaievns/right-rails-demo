@@ -1,20 +1,181 @@
 /**
- * Unified tabs engine for RightJS (http://rightjs.org/ui/tabs)
+ * Tabs widget for RightJS (http://rightjs.org/ui/tabs)
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-if (!RightJS) throw "Gimme RightJS";/**
+var Tabs = RightJS.Tabs = (function(document, parseInt, RightJS) {
+/**
+ * This module defines the basic widgets constructor
+ * it creates an abstract proxy with the common functionality
+ * which then we reuse and override in the actual widgets
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+
+/**
+ * The tabs init-script
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var R  = RightJS,
+    $  = RightJS.$,
+    $$ = RightJS.$$,
+    $w = RightJS.$w,
+    $E = RightJS.$E,
+    Fx      = RightJS.Fx,
+    Object  = RightJS.Object,
+    Browser = RightJS.Browser,
+    isArray = RightJS.isArray,
+    isNumber = RightJS.isNumber,
+    Wrapper = RightJS.Wrapper,
+    Element = RightJS.Element,
+    Cookie  = RightJS.Cookie;
+
+
+
+  
+
+
+
+/**
+ * The widget units constructor
+ *
+ * @param String tag-name or Object methods
+ * @param Object methods
+ * @return Widget wrapper
+ */ 
+function Widget(tag_name, methods) {
+  if (!methods) {
+    methods = tag_name;
+    tag_name = 'DIV';
+  }
+  
+  /**
+   * An Abstract Widget Unit
+   *
+   * Copyright (C) 2010 Nikolay Nemshilov
+   */
+  var AbstractWidget = new RightJS.Wrapper(RightJS.Element.Wrappers[tag_name] || RightJS.Element, {
+    /**
+     * The common constructor
+     *
+     * @param Object options
+     * @param String optional tag name
+     * @return void
+     */
+    initialize: function(key, options) {
+      this.key = key;
+      var args = [{'class': 'rui-' + key}];
+      
+      // those two have different constructors
+      if (!(this instanceof RightJS.Input || this instanceof RightJS.Form)) {
+        args.unshift(tag_name);
+      }
+      this.$super.apply(this, args);
+      
+      if (RightJS.isString(options)) {
+        options = RightJS.$(options);
+      }
+      
+      // if the options is another element then
+      // try to dynamically rewrap it with our widget
+      if (options instanceof RightJS.Element) {
+        this._ = options._;
+        if ('$listeners' in options) {
+          options.$listeners = options.$listeners;
+        }
+        options = {};
+      }
+      this.setOptions(options, this);
+      return this;
+    },
+
+  // protected
+
+    /**
+     * Catches the options
+     *
+     * @param Object user-options
+     * @param Element element with contextual options
+     * @return void
+     */
+    setOptions: function(options, element) {
+      element = element || this;
+      RightJS.Options.setOptions.call(this,
+        RightJS.Object.merge(options, eval("("+(
+          element.get('data-'+ this.key) || '{}'
+        )+")"))
+      );
+      return this;
+    }
+  });
+  
+  /**
+   * Creating the actual widget class
+   *
+   */
+  var Klass = new RightJS.Wrapper(AbstractWidget, methods);
+  
+  // creating the widget related shortcuts
+  RightJS.Observer.createShortcuts(Klass.prototype, Klass.EVENTS || []);
+  
+  return Klass;
+}
+
+
+/**
+ * A shared module to create textual spinners
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var Spinner = new RightJS.Wrapper(RightJS.Element, {
+  /**
+   * Constructor
+   *
+   * @param Number optional spinner size (4 by default)
+   * @return void
+   */
+  initialize: function(size) {
+    this.$super('div', {'class': 'rui-spinner'});    
+    this.dots = [];
+    
+    for (var i=0; i < (size || 4); i++) {
+      this.dots.push(new RightJS.Element('div'));
+    }
+    
+    this.dots[0].addClass('glowing');
+    this.insert(this.dots);
+    RightJS(this.shift).bind(this).periodical(300);
+  },
+  
+  /**
+   * Shifts the spinner elements
+   *
+   * @return void
+   */
+  shift: function() {
+    if (this.visible()) {
+      var dot = this.dots.pop();
+      this.dots.unshift(dot);
+      this.insert(dot, 'top');
+    }
+  }
+});
+
+/**
  * The basic tabs handling engine
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-var Tabs = new Class(Observer, {
+var Tabs = new Widget('UL', {
   extend: {
-    EVENTS: $w('show hide click load disable enable add remove move'),
+    version: '2.0.0',
+    
+    EVENTS: $w('select hide load disable enable add remove move'),
     
     Options: {
       idPrefix:       '',      // the tab-body elements id prefix
-      tabsElement:    null,    // the tabs list element reference, in case it situated somewhere else
+      tabsElement:    null,    // the tabs list element reference, in case it's situated somewhere else
       
       resizeFx:       'both',  // 'slide', 'fade', 'both' or null for no fx
       resizeDuration: 400,     // the tab panels resize fx duration
@@ -23,7 +184,7 @@ var Tabs = new Class(Observer, {
       scrollDuration: 400,     // the tabs scrolling fx duration
       
       selected:       null,    // the index of the currently opened tab, by default will check url, cookies or set 0
-      disabled:       [],      // list of disabled tab indexes
+      disabled:       null,    // list of disabled tab indexes
       
       closable:       false,   // set true if you want a close icon on your tabs
       
@@ -39,10 +200,8 @@ var Tabs = new Class(Observer, {
     
     // scans and automatically intializes the tabs
     rescan: function(scope) {
-      ($(scope) || document).select('*.right-tabs').each(function(element) {
-        if (!element._tabs) {
-          new Tabs(element);
-        }
+      $(scope || document).find('.rui-tabs,*[data-tabs]').each(function(element) {
+        element = element instanceof Tabs ? element : new Tabs(element);
       });
     }
   },
@@ -54,19 +213,28 @@ var Tabs = new Class(Observer, {
    * @param Object options
    */
   initialize: function(element, options) {
-    this.element = $(element);
-    this.$super(options || eval('('+this.element.get('data-tabs-options')+')'));
+    this
+      .$super('tabs', element)
+      .setOptions(options)
+      .addClass('rui-tabs');
     
-    this.element._tabs = this.init();
-  },
-  
-  /**
-   * destructor
-   *
-   * @return Tabs this
-   */
-  destroy: function() {
-    delete(this.element._tabs);
+    this.isHarmonica = this._.tagName === 'DL';
+    this.isCarousel  = this.hasClass('rui-tabs-carousel');
+    this.isSimple    = !this.isHarmonica && !this.isCarousel;
+    
+    this
+      .findTabs()
+      .initScrolls()
+      .findCurrent()
+      .setStyle('visibility:visible');
+    
+    if (this.options.disabled) {
+      this.disable(this.options.disabled);
+    }
+    
+    if (this.options.loop) {
+      this.startLoop();
+    }
   },
   
   /**
@@ -75,8 +243,8 @@ var Tabs = new Class(Observer, {
    * @param integer tab index or a Tabs.Tab instance
    * @return Tabs this
    */
-  show: function(tab) {
-    return this.callTab(tab, 'show');
+  select: function(tab) {
+    return this.callTab(tab, 'select');
   },
   
   /**
@@ -99,112 +267,120 @@ var Tabs = new Class(Observer, {
     return this.callTab(tab, 'enable');
   },
   
+  /**
+   * Returns the reference to the currently opened tab
+   *
+   * @return Tab tab or undefined
+   */
+  current: function() {
+    return this.tabs.first('current');
+  },
+  
+  /**
+   * Returns the list of enabled tabs
+   *
+   * @return Array of enabled tabs
+   */
+  enabled: function() {
+    return this.tabs.filter('enabled');
+  },
+  
 // protected
   
   // calls the tab (or tabs) method
-  callTab: function(tab, method) {
-    if (isArray(tab)) tab.each(this[method], this);
-    else if (tab = isNumber(tab) ? this.tabs[tab] : tab) tab[method]();
+  callTab: function(tabs, method) {
+    R(isArray(tabs) ? tabs : [tabs]).each(function(tab) {
+      if (isNumber(tab)) { tab = this.tabs[tab]; }
+      if (tab && tab instanceof Tab) {
+        tab[method]();
+      }
+    }, this);
+    
     return this;
-  },
-  
-  // initializes the tabs unit
-  init: function() {
-    this.isHarmonica = this.element.tagName == 'DL';
-    this.isCarousel  = this.element.hasClass('right-tabs-carousel');
-    this.isSimple    = !this.isHarmonica && !this.isCarousel;
-    
-    this.findTabs();
-    
-    this.element.addClass('right-tabs');
-    if (this.isSimple)
-      this.element.addClass('right-tabs-simple');
-    
-    return this.disable(this.options.disabled);
   },
   
   // finds and interconnects the tabs
   findTabs: function() {
-    this.tabsList = this.isHarmonica ? this.element :
-      $(this.options.tabsElement) || this.element.first('.right-tabs-list') ||
-        this.element.first('UL').addClass('right-tabs-list');
+    this.tabsList = this.isHarmonica ? this :
+      $(this.options.tabsElement) || this.first('.rui-tabs-list') ||
+        (this.first('UL') || $E('UL').insertTo(this)).addClass('rui-tabs-list');
     
-    this.tabs = this.tabsList.subNodes(this.isHarmonica ? 'dt' : null).map(function(node) {
-      return new Tabs.Tab(node, this);
+    this.tabs = R([]);
+    
+    this.tabsList.children(this.isHarmonica ? 'dt' : null).map(function(node) {
+      this.tabs.push(new Tab(node, this));
     }, this);
-  },
-  
-  // searches/builds a panel for the tab
-  findPanel: function(tab) {
-    var panel_id = this.options.idPrefix + tab.id, panel;
     
-    if (this.isHarmonica) {
-      var next = tab.element.next();
-      panel = (next && next.tagName == 'DD') ? next : $E('DD').insertTo(tab.element, 'after');
-    } else {
-      panel = $(panel_id) || $E(this.element.tagName == 'UL' ? 'LI' : 'DIV').insertTo(this.element);
+    // removing the whitespaces so the didn't screw with the margins
+    for (var i=0, list = this.tabsList.get('childNodes'); i < list.length; i++) {
+      if (list[i].nodeType == 3) { this.tabsList._.removeChild(list[i]); }
     }
-      
-    return panel.set('id', panel_id);
+    
+    return this;
   }
 });
 
 /**
  * A single tab handling object
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Tabs.Tab = new Class({
+var Tab = Tabs.Tab = new Wrapper(Element, {
   extend: {
     autoId: 0
   },
   
-  initialize: function(element, controller) {
-    this.element    = element.addClass('right-tabs-tab');
-    this.controller = controller;
+  /**
+   * Constructor
+   *
+   * @param Element the tab's element
+   * @param Tabs the main element
+   * @return void
+   */
+  initialize: function(element, main) {
+    this.$super(element._);
+    this.addClass('rui-tabs-tab');
     
-    this.element.onMousedown(this.click.bind(this)).onClick('stopEvent');
+    this.main  = main;
+    this.link  = this.first('a');
+    this.id    = this.link.get('href').split('#')[1] || Tab.autoId++;
+    this.panel = new Panel(this.findPanel(), this);
     
-    this.findLink();
-      
-    this.panel = new Tabs.Panel(controller.findPanel(this), this);
+    if (this.current()) {
+      this.select();
+    }
     
-    // adding the 'close' icon onto the tab
-    if (controller.options.closable) {
+    // adding the 'close' icon onto the tab if needed
+    if (main.options.closable) {
       this.link.insert($E('div', {
-        'class': 'right-tabs-tab-close-icon', 'html': '&times;'
-      }).onMousedown(this.remove.bind(this)).onClick('stopEvent'));
-    }
-  },
-  
-  click: function(event) {
-    event.stop();
-    return this.fire('click').show();
-  },
-  
-  show: function() {
-    if (this.enabled()) {
-      var prev_tab = this.controller.tabs.first('current');
-      if (prev_tab)  prev_tab.fire('hide');
-      
-      this.element.radioClass('right-tabs-current');
-      this.controller.scrollToTab(this);
-      this.panel.show();
-      
-      this.fire('show');
+        'class': 'rui-tabs-tab-close-icon', 'html': '&times;'
+      }).onClick(R(this.remove).bind(this)));
     }
     
-    return this;
+    this.onClick(this._clicked);
+  },
+  
+  select: function() {
+    if (this.enabled()) {
+      var prev_tab = this.main.current();
+      if (prev_tab) {
+        prev_tab.removeClass('rui-tabs-current').fire('hide');
+      }
+      
+      this.addClass('rui-tabs-current');
+      this.main.scrollToTab(this);
+      this.panel.show();
+    }
+    
+    return this.fire('select');
   },
   
   disable: function() {
-    this.element.addClass('right-tabs-disabled');
-    return this.fire('disable');
+    return this.addClass('rui-tabs-disabled').fire('disable');
   },
   
   enable: function() {
-    this.element.removeClass('right-tabs-disabled');
-    return this.fire('enable');
+    return this.removeClass('rui-tabs-disabled').fire('enable');
   },
   
   disabled: function() {
@@ -212,73 +388,95 @@ Tabs.Tab = new Class({
   },
   
   enabled: function() {
-    return !this.element.hasClass('right-tabs-disabled');
+    return !this.hasClass('rui-tabs-disabled');
   },
   
   current: function() {
-    return this.element.hasClass('right-tabs-current');
+    return this.hasClass('rui-tabs-current');
   },
   
   remove: function(event) {
-    if (event) event.stop();
+    if (event) { event.stop(); }
     
     // switching to the next available sibling
     if (this.current()) {
-      var enabled = this.controller.tabs.filter('enabled');
+      var enabled = this.main.enabled();
       var sibling = enabled[enabled.indexOf(this) + 1] || enabled[enabled.indexOf(this)-1];
       
       if (sibling) {
-        sibling.show();
+        sibling.select();
       }
     }
     
     // removing the tab out of the list
-    this.controller.tabs.splice(this.controller.tabs.indexOf(this), 1);
-    this.element.remove();
+    this.main.tabs.splice(this.main.tabs.indexOf(this), 1);
     this.panel.remove();
     
-    return this;
+    return this.$super().fire('remove');
   },
   
 // protected
-  // returns the tab width, used for the scrolling calculations
-  width: function() {
-    return this.element.offsetWidth + this.element.getStyle('marginRight').toInt();
+
+  // handles the clicks on the tabs
+  _clicked: function(event) {
+    event.stop();
+    return this.select();
   },
 
-  // the events firing wrapper
-  fire: function(event) {
-    this.controller.fire(event, this);
-    return this;
+  // searches for a panel for the tab
+  findPanel: function() {
+    var main = this.main, panel_id = main.options.idPrefix + this.id, panel;
+    
+    if (main.isHarmonica) {
+      var next = this.next();
+      panel = (next && next._.tagName === 'DD') ? next : $E('DD').insertTo(this, 'after');
+    } else {
+      panel = $(panel_id) || $E(main._.tagName === 'UL' ? 'LI' : 'DIV').insertTo(main);
+    }
+      
+    return panel.set('id', panel_id);
   },
   
-  // generates the automaticall id for the tab
-  findLink: function() {
-    this.link = this.element.first('a');
-    this.id = this.link.href.split('#')[1] || (this.controller.options.idPrefix + (Tabs.Tab.autoId++));
+  // returns the tab width, used for the scrolling calculations
+  width: function() {
+    var next = this.next();
+    
+    if (next) {
+      return next.position().x - this.position().x;
+    } else {
+      return this.size().x + 1;
+    }
   }
+
 });
 
 /**
  * The tab panels behavior logic
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Tabs.Panel = new Class(Observer, {
+var Panel = Tabs.Panel = new Wrapper(Element, {
   
+  /**
+   * Basic constructor
+   *
+   * @param Element panel-element
+   * @param Tab the tab object
+   * @return void
+   */
   initialize: function(element, tab) {
-    this.tab     = tab;
-    this.id      = element.id;
-    this.element = element.addClass('right-tabs-panel');
+    this.$super(element._);
+    this.addClass('rui-tabs-panel');
+    
+    this.tab = tab;
+    this.id  = this.get('id');
   },
   
   // shows the panel
   show: function() {
     return this.resizing(function() {
-      this.tab.controller.tabs.each(function(tab) {
-        var element = tab.panel.element;
-        element[element == this.element ?
-          'addClass' : 'removeClass']('right-tabs-panel-current');
+      this.tab.main.find('.rui-tabs-panel').each(function(panel) {
+        panel[panel === this ? 'addClass' : 'removeClass']('rui-tabs-current');
       }, this);
     });
   },
@@ -288,92 +486,91 @@ Tabs.Panel = new Class(Observer, {
     // don't use resize if it's some other hidden tab was loaded asynch
     if (this.tab.current()) {
       this.resizing(function() {
-        this.element.update(content||'');
+        Element.prototype.update.call(this, content||'');
       });
     } else {
-      this.element.update(content||'');
+      this.$super(content||'');
     }
     
     return this;
   },
   
-  // removes the pannel
-  remove: function() {
-    this.element.remove();
-    return this;
-  },
-  
   // locks the panel with a spinner locker
   lock: function() {
-    this.element.insert(this.locker(), 'top');
+    this.insert(this.locker(), 'top');
   },
   
 // protected
   
   resizing: function(callback) {
-    var controller = this.tab.controller;
+    var controller = this.tab.main;
     
-    if (controller.__working) return this.resizing.bind(this, callback).delay(100);
+    if (controller.__working) { return this.resizing.bind(this, callback).delay(100); }
     
     var options    = controller.options;
-    var prev_panel = controller.element.first('.right-tabs-panel-current');
-    var this_panel = this.element;
-    var swapping   = prev_panel != this_panel;
-    var loading    = this.element.first('div.right-tabs-panel-locker');
+    var prev_panel = controller.first('.rui-tabs-panel.rui-tabs-current');
+    var this_panel = this;
+    var swapping   = prev_panel !== this_panel;
+    var loading    = this.first('div.rui-tabs-panel-locker');
     
     // sometimes it looses the parent on remote tabs
-    if (this_panel.parentNode.hasClass('right-tabs-resizer')) this_panel.insertTo(prev_panel.parentNode);
+    if (this_panel.parent().hasClass('rui-tabs-resizer')) {
+      this_panel.insertTo(prev_panel.parent());
+    }
     
-    if (options.resizeFx && self.Fx && prev_panel && (swapping || loading)) {
+    if (options.resizeFx && RightJS.Fx && prev_panel && (swapping || loading)) {
       controller.__working = true;
       var unlock = function() { controller.__working = false; };
       
       // calculating the visual effects durations
-      var fx_name  = (options.resizeFx == 'both' && loading) ? 'slide' : options.resizeFx;
+      var fx_name  = (options.resizeFx === 'both' && loading) ? 'slide' : options.resizeFx;
       var duration = options.resizeDuration; duration = Fx.Durations[duration] || duration;
-      var resize_duration = fx_name == 'fade' ? 0 : fx_name == 'slide' ? duration : duration / 2;
+      var resize_duration = fx_name === 'fade' ? 0 : fx_name === 'slide' ? duration : duration / 2;
       var fade_duration   = duration - resize_duration;
       
-      if (fx_name != 'slide')
+      if (fx_name !== 'slide') {
         this_panel.setStyle({opacity: 0});
+      }
       
       // saving the previous sizes
-      var prev_panel_height = (controller.isHarmonica && swapping) ? 0 : prev_panel.offsetHeight;
+      var prev_panel_height = (controller.isHarmonica && swapping) ? 0 : prev_panel.size().y;
       
       // applying the changes
       callback.call(this);
       
       // getting the new size
-      var new_panel_height  = this_panel.offsetHeight;
+      var new_panel_height  = this_panel.size().y;
       var fx_wrapper = null;
+      var hide_wrapper = null;
+      var prev_back = null;
       
-      if (fx_name != 'fade' && prev_panel_height != new_panel_height) {
+      if (fx_name !== 'fade' && prev_panel_height !== new_panel_height) {
         // preserving the whole element size so it didn't jump when we are tossing the tabs around
-        controller.element.style.height = controller.element.offsetHeight + 'px';
+        controller._.style.height = controller.size().y + 'px';
         
         // wrapping the element with an overflowed element to visualize the resize
         fx_wrapper = $E('div', {
-          'class': 'right-tabs-resizer',
+          'class': 'rui-tabs-resizer',
           'style': 'height: '+ prev_panel_height + 'px'
         });
         
         // in case of harmonica nicely hidding the previous panel
         if (controller.isHarmonica && swapping) {
-          prev_panel.addClass('right-tabs-panel-current');
-          var hide_wrapper = $E('div', {'class': 'right-tabs-resizer'});
-          hide_wrapper.style.height = prev_panel.offsetHeight + 'px';
-          var prev_back = function() {
-            hide_wrapper.replace(prev_panel.removeClass('right-tabs-panel-current'));
+          prev_panel.addClass('rui-tabs-current');
+          hide_wrapper = $E('div', {'class': 'rui-tabs-resizer'});
+          hide_wrapper._.style.height = prev_panel.size().y + 'px';
+          prev_back = function() {
+            hide_wrapper.replace(prev_panel.removeClass('rui-tabs-current'));
           };
           prev_panel.wrap(hide_wrapper);
           
-          fx_wrapper.style.height = '0px';
+          fx_wrapper._.style.height = '0px';
         }
         
         this_panel.wrap(fx_wrapper);
         
         // getting back the auto-size so we could resize it
-        controller.element.style.height = 'auto';
+        controller._.style.height = 'auto';
         
       } else {
         // removing the resize duration out of the equasion
@@ -384,8 +581,9 @@ Tabs.Panel = new Class(Observer, {
       var counter = 0;
       var set_back = function() {
         if (fx_wrapper) {
-          if (fx_name == 'both' && !counter)
+          if (fx_name == 'both' && !counter) {
             return counter ++;
+          }
             
           fx_wrapper.replace(this_panel);
         }
@@ -393,21 +591,25 @@ Tabs.Panel = new Class(Observer, {
         unlock();
       };
       
-      if (hide_wrapper)
+      if (hide_wrapper) {
         hide_wrapper.morph({height: '0px'}, 
           {duration: resize_duration, onFinish: prev_back});
+      }
       
-      if (fx_wrapper)
+      if (fx_wrapper) {
         fx_wrapper.morph({height: new_panel_height + 'px'},
           {duration: resize_duration, onFinish: set_back});
+      }
       
-      if (fx_name != 'slide')
+      if (fx_name !== 'slide') {
         this_panel.morph.bind(this_panel, {opacity: 1},
           {duration: fade_duration, onFinish: set_back}
             ).delay(resize_duration);
+      }
             
-      if (!fx_wrapper && fx_name == 'slide')
+      if (!fx_wrapper && fx_name === 'slide') {
         set_back();
+      }
         
     } else {
       callback.call(this);
@@ -418,23 +620,10 @@ Tabs.Panel = new Class(Observer, {
   
   // builds the locker element
   locker: function() {
-    if (!this._locker) {
-      var locker  = $E('div', {'class': 'right-tabs-panel-locker'});
-      var spinner = $E('div', {'class': 'right-tabs-panel-locker-spinner'}).insertTo(locker);
-      var dots    = '1234'.split('').map(function(i) {
-        return $E('div', {'class': i == 1 ? 'glow':null}).insertTo(spinner);
-      });
-
-      (function() {
-        spinner.insert(dots.last(), 'top');
-        dots.unshift(dots.pop());
-      }).periodical(400);
-      
-      this._locker = locker;
-    }
-    return this._locker;
+    return this._locker || (this._locker = 
+      $E('div', {'class': 'rui-tabs-panel-locker'}).insert(new Spinner(5))
+    );
   }
-  
 });
 
 /**
@@ -445,13 +634,9 @@ Tabs.Panel = new Class(Observer, {
  *       any tab. But the carousel tabs scrolls to the next/previous
  *       tabs on the list.
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Tabs.include((function() {
-  var old_init = Tabs.prototype.init;
-  
-return {
-  
+Tabs.include({
   /**
    * Shows the next tab
    *
@@ -476,7 +661,10 @@ return {
    * @return Tabs this
    */
   scrollLeft: function() {
-    return this[this.isCarousel ? 'prev' : 'justScroll'](+0.6);
+    if (!this.prevButton.hasClass('rui-tabs-scroller-disabled')) {
+      this[this.isCarousel ? 'prev' : 'justScroll'](+0.6);
+    }
+    return this;
   },
 
   /**
@@ -485,16 +673,17 @@ return {
    * @return Tabs this
    */
   scrollRight: function() {
-    return this[this.isCarousel ? 'next' : 'justScroll'](-0.6);
+    if (!this.nextButton.hasClass('rui-tabs-scroller-disabled')) {
+      this[this.isCarousel ? 'next' : 'justScroll'](-0.6);
+    }
+    return this;
   },
 
 // protected
 
   // overloading the init script to add the scrollbar support
-  init: function() {
-    old_init.call(this);
-
-    if (this.scrollable = (this.options.scrollTabs || this.isCarousel)) {
+  initScrolls: function() {
+    if ((this.scrollable = (this.options.scrollTabs || this.isCarousel))) {
       this.buildScroller();
     }
 
@@ -503,54 +692,61 @@ return {
 
   // builds the tabs scroller block
   buildScroller: function() {
-    if (this.element.first('.right-tabs-scroller')) {
-      this.prevButton = this.element.first('.right-tabs-scroll-left');
-      this.nextButton = this.element.first('.right-tabs-scroll-right');
-    } else {
-      this.prevButton = $E('div', {'class': 'right-tabs-scroll-left',  'html': '&laquo;'});
-      this.nextButton = $E('div', {'class': 'right-tabs-scroll-right', 'html': '&raquo;'});
+    if (!(
+      (this.prevButton = this.first('.rui-tabs-scroller-prev')) &&
+      (this.nextButton = this.first('.rui-tabs-scroller-next'))
+    )) {
+      this.prevButton = $E('div', {'class': 'rui-tabs-scroller-prev', 'html': '&laquo;'});
+      this.nextButton = $E('div', {'class': 'rui-tabs-scroller-next', 'html': '&raquo;'});
       
-      this.element.insert($E('div', {'class': 'right-tabs-scroller'}).insert([
-        this.prevButton, this.nextButton, $E('div', {'class': 'right-tabs-scroll-body'}).insert(this.tabsList)
-      ]), 'top');
+      // using a dummy element to insert the scroller in place of the tabs list
+      $E('div').insertTo(this.tabsList, 'before')
+        .replace(
+          $E('div', {'class': 'rui-tabs-scroller'}).insert([
+            this.prevButton, this.nextButton, this.scroller = $E('div', {
+              'class': 'rui-tabs-scroller-body'
+            }).insert(this.tabsList)
+          ])
+        ).remove();
     }
     
-    this.prevButton.onClick(this.scrollLeft.bind(this));
-    this.nextButton.onClick(this.scrollRight.bind(this));
+    this.prevButton.onClick(R(this.scrollLeft).bind(this));
+    this.nextButton.onClick(R(this.scrollRight).bind(this));
   },
 
   // picks the next/prev non-disabled available tab
   pickTab: function(pos) {
-    var current = this.tabs.first('current');
+    var current = this.current();
     if (current && current.enabled()) {
-      var enabled_tabs = this.tabs.filter('enabled');
+      var enabled_tabs = this.enabled();
       var tab = enabled_tabs[enabled_tabs.indexOf(current) + pos];
-      if (tab) tab.show();
+      if (tab) { tab.select(); }
     }
   },
   
   // scrolls the tabs line to make the tab visible
   scrollToTab: function(tab) {
-    if (this.scrollable) {
+    if (this.scroller) {
       // calculating the previous tabs widths
       var tabs_width      = 0;
       for (var i=0; i < this.tabs.length; i++) {
         tabs_width += this.tabs[i].width();
-        if (this.tabs[i] == tab) break;
+        if (this.tabs[i] === tab) { break; }
       }
       
       // calculating the scroll (the carousel tabs should be centralized)
-      var available_width = this.tabsList.parentNode.offsetWidth;
+      var available_width = this.scroller.size().x;
       var scroll = (this.isCarousel ? (available_width/2 + tab.width()/2) : available_width) - tabs_width;
       
       // check if the tab doesn't need to be scrolled
       if (!this.isCarousel) {
-        var current_scroll  = this.tabsList.getStyle('left').toInt() || 0;
+        var current_scroll  = parseInt(this.tabsList.getStyle('left') || 0, 10);
         
-        if (scroll >= current_scroll && scroll < (current_scroll + available_width - tab.width()))
+        if (scroll >= current_scroll && scroll < (current_scroll + available_width - tab.width())) {
           scroll = current_scroll;
-        else if (current_scroll > -tabs_width && current_scroll <= (tab.width() - tabs_width))
+        } else if (current_scroll > -tabs_width && current_scroll <= (tab.width() - tabs_width)) {
           scroll = tab.width() - tabs_width;
+        }
       }
       
       this.scrollTo(scroll);
@@ -559,8 +755,9 @@ return {
   
   // just scrolls the scrollable area onto the given number of scrollable area widths
   justScroll: function(size) {
-    var current_scroll  = this.tabsList.getStyle('left').toInt() || 0;
-    var available_width = this.tabsList.parentNode.offsetWidth;
+    if (!this.scroller) { return this; }
+    var current_scroll  = parseInt(this.tabsList.getStyle('left') || 0, 10);
+    var available_width = this.scroller.size().x;
     
     this.scrollTo(current_scroll + available_width * size);
   },
@@ -568,35 +765,26 @@ return {
   // scrolls the tabs list to the position
   scrollTo: function(scroll) {
     // checking the constraints
-    var current_scroll  = this.tabsList.getStyle('left').toInt() || 0;
-    var available_width = this.tabsList.parentNode.offsetWidth;
-    var overall_width   = 0;
-    for (var i=0; i < this.tabs.length; i++) {
-      overall_width += this.tabs[i].width();
-    }
+    var available_width = this.scroller.size().x;
+    var overall_width   = this.tabs.map('width').sum();
     
-    if (scroll < (available_width - overall_width))
+    if (scroll < (available_width - overall_width)) {
       scroll = available_width - overall_width;
-    if (scroll > 0) scroll = 0;
+    }
+    if (scroll > 0) { scroll = 0; }
     
     // applying the scroll
-    var style = {left: scroll + 'px'};
-    
-    if (this.options.scrollDuration && self.Fx && current_scroll != scroll) {
-      this.tabsList.morph(style, {duration: this.options.scrollDuration});
-    } else {
-      this.tabsList.setStyle(style);
-    }
+    this.tabsList.morph({left: scroll+'px'}, {duration: this.options.scrollDuration});
     
     this.checkScrollButtons(overall_width, available_width, scroll);
   },
   
   // checks the scroll buttons
   checkScrollButtons: function(overall_width, available_width, scroll) {
-    var has_prev = has_next = false;
+    var has_prev = false, has_next = false;
     
     if (this.isCarousel) {
-      var enabled = this.tabs.filter('enabled');
+      var enabled = this.enabled();
       var current = enabled.first('current');
       
       if (current) {
@@ -606,63 +794,58 @@ return {
         has_next = index < enabled.length - 1;
       }
     } else {
-      has_prev = scroll != 0;
+      has_prev = scroll !== 0;
       has_next = scroll > (available_width - overall_width);
     }
     
-    this.prevButton[has_prev ? 'removeClass' : 'addClass']('right-tabs-scroll-disabled');
-    this.nextButton[has_next ? 'removeClass' : 'addClass']('right-tabs-scroll-disabled');
+    this.prevButton[has_prev ? 'removeClass' : 'addClass']('rui-tabs-scroller-disabled');
+    this.nextButton[has_next ? 'removeClass' : 'addClass']('rui-tabs-scroller-disabled');
   }
   
-}})());
+});
 
 /**
  * This module handles the current tab state saving/restoring processes
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Tabs.include((function() {
-  var old_initialize = Tabs.prototype.initialize;
-  
-  var get_cookie_indexes = function() {
-    return self.Cookie ? (Cookie.get('right-tabs-indexes') || '').split(',') : [];
-  };
-  
-  var save_tab_in_cookies = function(options, tabs, tab) {
-    if (self.Cookie) {
-      var indexes = get_cookie_indexes();
-      indexes = indexes.without.apply(indexes, tabs.map('id'));
-      indexes.push(tab.id);
-      Cookie.set('right-tabs-indexes', indexes.uniq().join(','), options);
-    }
-  };
+function get_cookie_indexes() {
+  return R(RightJS.Cookie ? (Cookie.get('right-tabs-indexes') || '').split(',') : []);
+}
 
-return {
-  
-  // overloading the constructor to catch up the current tab properly
-  initialize: function() {
-    old_initialize.apply(this, arguments);
-    
-    this.findCurrent();
-    
-    // initializing the cookies storage if set
-    if (this.options.Cookie)
-      this.onShow(save_tab_in_cookies.curry(this.options.Cookie, this.tabs));
-  },
-  
+function save_tab_in_cookies(options, tabs, event) {
+  if (RightJS.Cookie) {
+    var indexes = get_cookie_indexes();
+    indexes = indexes.without.apply(indexes, tabs.map('id'));
+    indexes.push(event.target.id);
+    Cookie.set('right-tabs-indexes', indexes.uniq().join(','), options);
+  }
+}
+
+Tabs.include({
   
 // protected
   
   // searches and activates the current tab
   findCurrent: function() {
     var current;
-    if (this.options.selected !== null)
+    if (this.options.selected !== null) {
       current = this.options.selected;
-    else {
-      var enabled = this.tabs.filter('enabled');
+    } else {
+      var enabled = this.enabled();
       current = enabled[this.urlIndex()] || enabled[this.cookieIndex()] || enabled.first('current') || enabled[0];
     }
-    if (current) current.show();
+    
+    if (current) {
+      current.select();
+    }
+    
+    // initializing the cookies storage if set
+    if (this.options.Cookie) {
+      this.onSelect(R(save_tab_in_cookies).curry(this.options.Cookie, this.tabs));
+    }
+    
+    return this;
   },
   
   // tries to find the current tab index in the url hash
@@ -698,12 +881,12 @@ return {
     return index;
   }
   
-}})());
+});
 
 /**
  * This module handles the tabs cration and removing processes   
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
 Tabs.include({
   /**
@@ -724,7 +907,7 @@ Tabs.include({
    * @return Tabs this
    */
   add: function(title, content, options) {
-    var options = options || {};
+    options = options || {};
     
     // creating the new tab element
     var element = $E(this.isHarmonica ? 'dt' : 'li').insert(
@@ -732,14 +915,17 @@ Tabs.include({
     )).insertTo(this.tabsList);
     
     // creating the actual tab instance
-    var tab = new Tabs.Tab(element, this);
-    tab.panel.element.update(content||'');
+    var tab = new Tab(element, this);
+    tab.panel.update(content||'');
     this.tabs.push(tab);
+    tab.fire('add');
     
     // moving the tab in place if asked
-    if (defined(options.position)) this.move(tab, options.position);
+    if ('position' in options) {
+      this.move(tab, options.position);
+    }
     
-    return this.fire('add', tab);
+    return this;
   },
   
   /**
@@ -752,18 +938,22 @@ Tabs.include({
    * @return Tabs this
    */
   move: function(tab, position) {
-    var tab = this.tabs[tab] || tab;
+    tab = this.tabs[tab] || tab;
     
     if (this.tabs[position] && this.tabs[position] !== tab) {
       // moving the tab element
-      this.tabs[position].element.insert(tab.element, (position == this.tabs.length-1) ? 'after' : 'before');
-      if (this.isHarmonica) tab.element.insert(tab.panel.element, 'after');
+      this.tabs[position].insert(tab, (position === this.tabs.length-1) ? 'after' : 'before');
+      
+      // inserting the panel after the tab if it's a harmonica
+      if (this.isHarmonica) {
+        tab.insert(tab.panel, 'after');
+      }
       
       // moving the tab in the registry
       this.tabs.splice(this.tabs.indexOf(tab), 1);
       this.tabs.splice(position, 0, tab);
       
-      this.fire('move', tab, position);
+      tab.fire('move', {index: position});
     }
     
     return this;
@@ -784,24 +974,24 @@ Tabs.include({
 /**
  * This module contains the remote tabs loading logic
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Tabs.Tab.include((function() {
-  var old_show = Tabs.Tab.prototype.show;
+var old_select = Tab.prototype.select;
+
+Tab.include({
   
-return {
-  
-  // wrapping the show mehtod, to catch the remote requests
-  show: function() {
-    if (this.dogPiling(arguments)) return this;
+  // wrapping the original mehtod, to catch the remote requests
+  select: function() {
+    if (this.dogPiling(arguments)) { return this; }
     
-    var result  = old_show.apply(this, arguments);
-    var url     = this.link.href;
-    var options = this.controller.options;
+    var result  = old_select.apply(this, arguments);
+    var url     = R(this.link.get('href'));
+    var options = this.main.options;
     
     // building the url
-    if (url.includes('#')) 
+    if (url.includes('#')) {
       url = options.url ? options.url.replace('%{id}', url.split('#')[1]) : null;
+    }
     
     // if there is an actual url and no ongoing request or a cache, starting the request
     if (url && !this.request && !(options.cache || this.cache)) {
@@ -809,21 +999,24 @@ return {
       
       try { // basically that's for the development tests, so the IE browsers didn't get screwed on the test page
       
-        this.request = new Xhr(url, Object.merge({method: 'get'}, options.Xhr))
-          .onComplete(function(response) {
-            if (this.controller.__working)
+        this.request = new RightJS.Xhr(url, Object.merge({method: 'get'}, options.Xhr))
+          .onComplete(R(function(response) {
+            if (this.main.__working) {
               return arguments.callee.bind(this, response).delay(100);
+            }
             
             this.panel.update(response.text);
 
             this.request = null; // removing the request marker so it could be rerun
-            if (options.cache) this.cache = true;
+            if (options.cache) {
+              this.cache = true;
+            }
 
             this.fire('load');
-          }.bind(this)
+          }).bind(this)
         ).send();
         
-      } catch(e) { if (!Browser.OLD) throw(e) }
+      } catch(e) { if (!Browser.OLD) { throw(e); } }
     }
     
     return result;
@@ -832,42 +1025,29 @@ return {
 // protected
 
   dogPiling: function(args) {
-    if (this.controller.__working) {
-      if (this.controller.__timeout)
-        this.controller.__timeout.cancel();
+    if (this.main.__working) {
+      if (this.main.__timeout) {
+        this.main.__timeout.cancel();
+      }
       
-      this.controller.__timeout = (function(args) {
-        this.show.apply(this, args);
+      this.main.__timeout = R(function(args) {
+        this.select.apply(this, args);
       }).bind(this, args).delay(100);
       
       return true;
     }
     
-    return this.controller.__timeout = null;
+    return (this.main.__timeout = null);
   }
   
-}})());
+});
 
 /**
  * This module handles the slide-show loop feature for the Tabs
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Tabs.include((function() {
-  var old_initialize = Tabs.prototype.initialize;
-  
-return {
-  /**
-   * Overloading the constructor to start the slideshow loop automatically
-   *
-   */
-  initialize: function() {
-    old_initialize.apply(this, arguments);
-    
-    if (this.options.loop) {
-      this.startLoop();
-    }
-  },
+Tabs.include({
   
   /**
    * Starts the slideshow loop
@@ -876,12 +1056,12 @@ return {
    * @return Tabs this
    */
   startLoop: function(delay) {
-    if (!delay && !this.options.loop) return this;
+    if (!delay && !this.options.loop) { return this; }
     
     // attaching the loop pause feature
     if (this.options.loopPause) {
-      this._stopLoop  = this._stopLoop  || this.stopLoop.bind(this, true);
-      this._startLoop = this._startLoop || this.startLoop.bind(this, delay);
+      this._stopLoop  = this._stopLoop  || R(this.stopLoop).bind(this, true);
+      this._startLoop = this._startLoop || R(this.startLoop).bind(this, delay);
       
       this.forgetHovers().on({
         mouseover: this._stopLoop,
@@ -889,16 +1069,16 @@ return {
       });
     }
     
-    if (this.timer) this.timer.stop();
+    if (this.timer) { this.timer.stop(); }
     
-    this.timer = function() {
-      var enabled = this.tabs.filter('enabled');
-      var current = this.tabs.first('current');
+    this.timer = R(function() {
+      var enabled = this.enabled();
+      var current = this.current();
       var next    = enabled[enabled.indexOf(current)+1];
       
-      this.show(next || enabled.first());
+      this.select(next || enabled.first());
       
-    }.bind(this).periodical(this.options.loop || delay);
+    }).bind(this).periodical(this.options.loop || delay);
     
     return this;
   },
@@ -913,25 +1093,31 @@ return {
       this.timer.stop();
       this.timer = null;
     }
-    if (!pause && this._startLoop)
+    if (!pause && this._startLoop) {
       this.forgetHovers();
+    }
   },
   
 // private
   forgetHovers: function() {
-    return this.element
+    return this
       .stopObserving('mouseover', this._stopLoop)
       .stopObserving('mouseout', this._startLoop);
   }
   
   
-}})());
+});
 
 /**
  * The document level hooks for the tabs-egnine
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-document.onReady(function() {
+$(document).onReady(function() {
   Tabs.rescan();
-});document.write("<style type=\"text/css\">.right-tabs,.right-tabs-list,.right-tabs-tab,.right-tabs-panel,.right-tabs-scroll-left,.right-tabs-scroll-right,.right-tabs-scroll-body,.right-tabs-panel-locker,.right-tabs-resizer{margin:0;padding:0;background:none;border:none;list-style:none;display:block;width:auto;height:auto}.right-tabs{border-bottom:1px solid #CCC}.right-tabs-resizer{overflow:hidden}.right-tabs-tab,.right-tabs-tab a{display:block;float:left}.right-tabs-tab a{position:relative;cursor:pointer;text-decoration:none;border:1px solid #CCC;background:#DDD;color:#444;-moz-border-radius:.3em;-webkit-border-radius:.3em}.right-tabs-tab a:hover{border-color:#CCC;background:#EEE}.right-tabs-tab.right-tabs-current a{font-weight:bold;color:#000;background:#FFF}.right-tabs-tab a img{border:none;opacity:.6;filter:alpha(opacity=60)}.right-tabs-tab a:hover img,.right-tabs-tab.right-tabs-current a img{opacity:1;filter:alpha(opacity=100)}.right-tabs-disabled a,.right-tabs-disabled a:hover{background:#EEE;border-color:#DDD;color:#AAA;cursor:default}.right-tabs-disabled a img,.right-tabs-disabled a:hover img{opacity:.5;filter:alpha(opacity=50)}.right-tabs-tab-close-icon{display:inline-block;*display:inline;*zoom:1;margin-right:-0.5em;margin-left:0.5em;cursor:pointer;opacity:0.5;filter:alpha(opacity=50)}.right-tabs-tab-close-icon:hover{opacity:1;filter:alpha(opacity=100);color:#B00;text-shadow:#888 .15em .15em .2em}.right-tabs-panel{display:none;position:relative;min-height:4em;padding:.5em 0}.right-tabs-panel-current{display:block}.right-tabs-panel-locker{position:absolute;top:0px;left:0px;opacity:0.5;filter:alpha(opacity=50);background:#CCC;width:100%;height:100%;text-align:center;line-height:100%}.right-tabs-panel-locker-spinner{position:absolute;left:44%;top:44%}.right-tabs-panel-locker-spinner div{float:left;background:#777;width:.5em;height:1em;margin-right:.1em;-moz-border-radius:.1em;-webkit-border-radius:.1em}.right-tabs-panel-locker-spinner div.glow{background:#444;height:1.2em;margin-top:-0.1em}.right-tabs-scroller{padding:0 1.4em;position:relative;margin-bottom:.5em}.right-tabs-scroll-left,.right-tabs-scroll-right{width:1.1em;text-align:center;background:#EEE;color:#666;cursor:pointer;border:1px solid #CCC;-moz-border-radius:.2em;-webkit-border-radius:.2em;position:absolute;top:0px;left:0px;z-index:100}div.right-tabs-scroll-left:hover,div.right-tabs-scroll-right:hover{color:#000;background:#DDD;border-color:#AAA}.right-tabs-scroll-right{left:auto;right:0px}.right-tabs .right-tabs-scroller .right-tabs-scroll-disabled,.right-tabs .right-tabs-scroller .right-tabs-scroll-disabled:hover{cursor:default;background:#DDD;border-color:#DDD;color:#AAA}.right-tabs-scroll-body{width:100%;overflow:hidden;position:relative;z-index:50}.right-tabs-scroller .right-tabs-list{position:relative;width:999em;margin:0}.right-tabs-simple .right-tabs-list{height:2em;padding:0 1em;border-bottom:1px solid #CCC}.right-tabs-simple .right-tabs-tab{margin-top:-1px;margin-right:1px}.right-tabs-simple .right-tabs-tab a{line-height:1.8em;margin-top:.2em;padding:0 1em;border-bottom:none;-moz-border-radius-bottomleft:0;-moz-border-radius-bottomright:0;-webkit-border-bottom-left-radius:0;-webkit-border-bottom-right-radius:0}.right-tabs-simple .right-tabs-tab.right-tabs-current a{line-height:2em;margin-top:1px}.right-tabs-simple .right-tabs-scroller{border-bottom:1px solid #CCC}.right-tabs-simple .right-tabs-scroll-left,.right-tabs-simple .right-tabs-scroll-right{line-height:1.8em;top:.2em;-moz-border-radius-bottomleft:0;-moz-border-radius-bottomright:0;-webkit-border-bottom-left-radius:0;-webkit-border-bottom-right-radius:0}.right-tabs-simple .right-tabs-scroll-body{position:relative;top:1px}.right-tabs-simple .right-tabs-list{padding:0}.right-tabs-carousel .right-tabs-list,.right-tabs-carousel .right-tabs-tab a,.right-tabs-carousel .right-tabs-scroller .right-tabs-scroll-left,.right-tabs-carousel .right-tabs-scroller .right-tabs-scroll-right{height:6em;line-height:6em}.right-tabs-carousel .right-tabs-tab{margin-right:2px}.right-tabs-carousel .right-tabs-tab a img{border:1px solid #CCC;margin:.4em;padding:0}dl.right-tabs{overflow:none;border:none}dt.right-tabs-tab,dt.right-tabs-tab a{display:block;float:none}dt.right-tabs-tab a{padding:.2em 1em}dl.right-tabs dt.right-tabs-current a{background:#EEE;-moz-border-radius-bottomleft:0;-moz-border-radius-bottomright:0;-webkit-border-bottom-left-radius:0;-webkit-border-bottom-right-radius:0}</style>");
+});
+
+document.write("<style type=\"text/css\">div.rui-spinner,div.rui-spinner div{margin:0;padding:0;border:none;background:none;list-style:none;font-weight:normal;float:none;display:inline-block; *display:inline; *zoom:1;border-radius:.12em;-moz-border-radius:.12em;-webkit-border-radius:.12em}div.rui-spinner{text-align:center;white-space:nowrap;background:#EEE;border:1px solid #DDD;height:1.2em;padding:0 .2em}div.rui-spinner div{width:.4em;height:70%;background:#BBB;margin-left:1px}div.rui-spinner div:first-child{margin-left:0}div.rui-spinner div.glowing{background:#777}.rui-tabs,.rui-tabs-list,.rui-tabs-tab,.rui-tabs-panel,.rui-tabs-scroll-left,.rui-tabs-scroll-right,.rui-tabs-scroll-body,.rui-tabs-panel-locker,.rui-tabs-resizer{margin:0;padding:0;background:none;border:none;list-style:none;display:block;width:auto;height:auto}.rui-tabs{display:block;visibility:hidden;border-bottom:1px solid #CCC}.rui-tabs-resizer{overflow:hidden}.rui-tabs-list{display:block;position:relative;padding:0 .5em;border-bottom:1px solid #CCC;white-space:nowrap}.rui-tabs-list .rui-tabs-tab,.rui-tabs-tab *,.rui-tabs-tab *:hover{display:inline-block; *display:inline; *zoom:1;cursor:pointer;text-decoration:none;vertical-align:center}.rui-tabs-list .rui-tabs-tab{vertical-align:bottom;margin-right:.1em}.rui-tabs-tab a{outline:none;position:relative;border:1px solid #CCC;background:#DDD;color:#444;padding:.3em 1em;border-radius:.3em;-moz-border-radius:.3em;-webkit-border-radius:.3em;border-bottom:none;border-bottom-left-radius:0;border-bottom-right-radius:0;-moz-border-radius-bottomleft:0;-moz-border-radius-bottomright:0;-webkit-border-bottom-left-radius:0;-webkit-border-bottom-right-radius:0}.rui-tabs-tab a:hover{border-color:#CCC;background:#EEE}.rui-tabs-list .rui-tabs-current a,.rui-tabs-list .rui-tabs-current a:hover{font-weight:bold;color:#000;background:#FFF;border-bottom:1px solid #FFF;border-top-width:2px;padding-top:.34em;padding-bottom:.34em;top:1px}.rui-tabs-tab a img{border:none;opacity:.6;filter:alpha(opacity=60)}.rui-tabs-tab a:hover img,.rui-tabs-list .rui-tabs-current a img{opacity:1;filter:alpha(opacity=100)}.rui-tabs-disabled a,.rui-tabs-disabled a:hover{background:#EEE;border-color:#DDD;color:#AAA;cursor:default}.rui-tabs-disabled a img,.rui-tabs-disabled a:hover img{opacity:.5;filter:alpha(opacity=50)}.rui-tabs-tab-close-icon{display:inline-block; *display:inline; *zoom:1;margin-right:-0.5em;margin-left:0.5em;cursor:pointer;opacity:0.5;filter:alpha(opacity=50)}.rui-tabs-tab-close-icon:hover{opacity:1;filter:alpha(opacity=100);color:#B00;text-shadow:#888 .15em .15em .2em}.rui-tabs-panel{display:none;position:relative;min-height:4em;padding:.5em 0}.rui-tabs-current{display:block}.rui-tabs-scroller{position:relative;padding:0 1.4em}.rui-tabs-scroller-prev,.rui-tabs-scroller-next{width:1.1em;text-align:center;background:#EEE;color:#666;cursor:pointer;border:1px solid #CCC;border-radius:.2em;-moz-border-radius:.2em;-webkit-border-radius:.2em;position:absolute;bottom:0px;left:0px;padding:0.3em 0;user-select:none;-moz-user-select:none;-webkit-user-select:none}.rui-tabs-scroller-prev:hover,.rui-tabs-scroller-next:hover{color:#000;background:#DDD;border-color:#AAA}.rui-tabs-scroller-prev:active,.rui-tabs-scroller-next:active{background:#eee;border-color:#ccc}.rui-tabs-scroller-next{left:auto;right:0px}.rui-tabs-scroller-disabled,.rui-tabs-scroller-disabled:hover{cursor:default;background:#DDD;border-color:#DDD;color:#AAA}.rui-tabs-scroller-body{overflow:hidden;width:100%;position:relative}.rui-tabs-scroller .rui-tabs-list{padding-left:0;padding-right:0;width:9999em;z-index:10}.rui-tabs-panel-locker{position:absolute;top:0px;left:0px;opacity:0.5;filter:alpha(opacity=50);background:#CCC;width:100%;height:100%;text-align:center}.rui-tabs-panel-locker .rui-spinner{position:absolute;left:44%;top:44%;background:none;border:none;height:2em}.rui-tabs-panel-locker .rui-spinner div{background:#666;width:.65em;margin-left:.15em}.rui-tabs-panel-locker .rui-spinner div.glowing{background:#000}.rui-tabs-carousel .rui-tabs-list{border:none}.rui-tabs-carousel .rui-tabs-tab a,.rui-tabs-carousel .rui-tabs-scroller .rui-tabs-scroller-prev,.rui-tabs-carousel .rui-tabs-scroller .rui-tabs-scroller-next{height:6em;line-height:6em;padding:0;border-bottom:1px solid #ccc;border-radius:.25em;-moz-border-radius:.25em;-webkit-border-radius:.25em}.rui-tabs-carousel .rui-tabs-tab{margin-right:3px}.rui-tabs-carousel .rui-tabs-tab a img{border:1px solid #CCC;vertical-align:middle;margin:.4em;padding:0;border-radius:0;-moz-border-radius:0;-webkit-border-radius:0}.rui-tabs-carousel .rui-tabs-list .rui-tabs-current a{border-width:1px;border-color:#AAA;padding:0;top:auto}.rui-tabs-carousel .rui-tabs-list .rui-tabs-current a img{border-color:#bbb}.rui-tabs-carousel .rui-tabs-panel{text-align:center}dl.rui-tabs{border:none}dt.rui-tabs-tab,dt.rui-tabs-tab a,dt.rui-tabs-tab a:hover{display:block;float:none}dt.rui-tabs-tab a,dt.rui-tabs-tab a:hover{padding:.2em 1em;border:1px solid #ccc;border-radius:.25em;-moz-border-radius:.3em;-webkit-border-radius:.3em}dl.rui-tabs dt.rui-tabs-current a{background:#EEE;border-bottom-left-radius:0;border-bottom-right-radius:0;-moz-border-radius-bottomleft:0;-moz-border-radius-bottomright:0;-webkit-border-bottom-left-radius:0;-webkit-border-bottom-right-radius:0}dl.rui-tabs dd.rui-tabs-current+dt.rui-tabs-tab a{border-top-left-radius:0;border-top-right-radius:0;-moz-border-radius-topleft:0;-moz-border-radius-topright:0;-webkit-border-top-left-radius:0;-webkit-border-top-right-radius:0}</style>");
+
+return Tabs;
+})(document, parseInt, RightJS);

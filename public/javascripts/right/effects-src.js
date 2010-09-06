@@ -1,14 +1,37 @@
 /**
- * Additional visual effects module
+ * RightJS Additional visual effects module
+ * http://rightjs.org/plugins/effects
  *
- * Copyright (C) 2008-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2008-2010 Nikolay Nemshilov
  */
-if (!self.Fx) throw "RightJS Fx is missing";
-/**
+(function(RightJS) {
+  if (!RightJS.Fx) { throw "RightJS Fx is missing"; }
+  
+  /**
  * The basic move visual effect
  *
  * @copyright (C) 2009-2010 Nikolay V. Nemshilov
  */
+
+/**
+ * The plugin initializtion script
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+ 
+var R        = RightJS,
+    $        = RightJS.$,
+    $w       = RightJS.$w,
+    $A       = RightJS.$A,
+    Fx       = RightJS.Fx,
+    Class    = RightJS.Class,
+    Object   = RightJS.Object,
+    Element  = RightJS.Element,
+    defined  = RightJS.defined,
+    isHash   = RightJS.isHash,
+    isString = RightJS.isString;
+     
+
 Fx.Move = new Class(Fx.Morph, {
   extend: {
     Options: Object.merge(Fx.Options, {
@@ -26,11 +49,11 @@ Fx.Move = new Class(Fx.Morph, {
     var position = this.element.getStyle('position'), end_style = {};
     
     if (position != 'absolute' || position != 'relative') {
-      this.element.style.position = position = position == 'fixed' ? 'absolute' : 'relative';
+      this.element._.style.position = position = position == 'fixed' ? 'absolute' : 'relative';
     }
     
-    if (end_position.top)  end_position.y = end_position.top.toInt();
-    if (end_position.left) end_position.x = end_position.left.toInt();
+    if (end_position.top)  { end_position.y = end_position.top.toInt();  }
+    if (end_position.left) { end_position.x = end_position.left.toInt(); }
     
     // adjusting the end position
     var cur_position = this.element.position();
@@ -40,15 +63,15 @@ Fx.Move = new Class(Fx.Morph, {
     
     if (this.options.position == 'relative') {
       if (position == 'absolute') {
-        if (defined(end_position.x)) end_position.x += cur_position.x;
-        if (defined(end_position.y)) end_position.y += cur_position.x;
+        if (defined(end_position.x)) { end_position.x += cur_position.x; }
+        if (defined(end_position.y)) { end_position.y += cur_position.x; }
       } else {
-        if (defined(end_position.x)) end_position.x += rel_left;
-        if (defined(end_position.y)) end_position.y += rel_top;
+        if (defined(end_position.x)) { end_position.x += rel_left; }
+        if (defined(end_position.y)) { end_position.y += rel_top;  }
       }
     } else if (position == 'relative') {
-      if (defined(end_position.x)) end_position.x += rel_left - cur_position.x;
-      if (defined(end_position.y)) end_position.y += rel_top  - cur_position.y;
+      if (defined(end_position.x)) { end_position.x += rel_left - cur_position.x; }
+      if (defined(end_position.y)) { end_position.y += rel_top  - cur_position.y; }
     }
     
     // need this to bypass the other styles from the subclasses
@@ -72,6 +95,7 @@ Fx.Move = new Class(Fx.Morph, {
     return position;
   }
 });
+
 /**
  * Zoom visual effect, graduately zoom and element in or out
  *
@@ -110,12 +134,12 @@ Fx.Zoom = new Class(Fx.Move, {
     if (isHash(size)) {
       var sizes = $E('div').insertTo(
         $E('div', {style: "visibility:hidden;float:left;height:0;width:0"}).insertTo(document.body)
-      ).setStyle(size).sizes();
+      ).setStyle(size).size();
       
-      if (size.height) size = sizes.y / this.element.sizes().y;
-      else             size = sizes.x / this.element.sizes().x;
+      if (size.height) { size = sizes.y / this.element.size().y; }
+      else             { size = sizes.x / this.element.size().x; }
     } else if (isString(size)) {
-      size  = size.endsWith('%') ? size.toFloat() / 100 : size.toFloat();
+      size  = R(size).endsWith('%') ? R(size).toFloat() / 100 : R(size).toFloat();
     }
     
     return size;
@@ -125,20 +149,24 @@ Fx.Zoom = new Class(Fx.Move, {
   _getBasicStyle: function(proportion) {
     var style = this._cloneStyle(this.element, this.PROPERTIES), re = /([\d\.]+)/g;
     
+    function adjust_value(m) {
+      return ''+ (R(m).toFloat() * proportion);
+    }
+    
     for (var key in style) {
-      if (key === 'width' || key === 'height') style[key] = style[key] || (this.element['offset'+key.capitalize()]+'px');
+      if (key === 'width' || key === 'height') {
+        style[key] = style[key] || (this.element['offset'+R(key).capitalize()]+'px');
+      }
       
       if (style[key].match(re)) {
-        style[key] = style[key].replace(re, function(m) {
-          return ''+ (m.toFloat() * proportion);
-        });
+        style[key] = style[key].replace(re, adjust_value);
       } else {
         delete(style[key]);
       }
     }
     
     // preventing the border disappearance
-    if (style.borderWidth && style.borderWidth.toFloat() < 1) {
+    if (style.borderWidth && R(style.borderWidth).toFloat() < 1) {
       style.borderWidth = '1px';
     }
     
@@ -148,7 +176,7 @@ Fx.Zoom = new Class(Fx.Move, {
   // getting the position adjustments
   _getEndPosition: function(proportion) {
     var position = {};
-    var sizes    = this.element.sizes();
+    var sizes    = this.element.size();
     var x_diff   = sizes.x * (proportion - 1);
     var y_diff   = sizes.y * (proportion - 1);
     
@@ -186,6 +214,7 @@ Fx.Zoom = new Class(Fx.Move, {
     return position;
   }
 });
+
 /**
  * Bounce visual effect, slightly moves an element forward and back
  *
@@ -231,6 +260,7 @@ Fx.Bounce = new Class(Fx, {
     return this;
   }
 });
+
 /**
  * run out and run in efffects
  *
@@ -243,8 +273,8 @@ Fx.Run = new Class(Fx.Move, {
     })
   },
   
-  prepare: function(how) {
-    var how = how || 'toggle', position = {}, dimensions = this.element.dimensions(), threshold = 80;
+  prepare: function(in_how) {
+    var how = in_how || 'toggle', position = {}, dimensions = this.element.dimensions(), threshold = 80;
     
     if (how == 'out' || (how == 'toggle' && this.element.visible())) {
       if (this.options.direction == 'left') {
@@ -254,7 +284,7 @@ Fx.Run = new Class(Fx.Move, {
       }
       this.onFinish(function() {
         this.element.hide().setStyle(this.getEndPosition({x: dimensions.left, y: dimensions.top}));
-      })
+      });
     } else {
       dimensions = this.element.setStyle('visibility: hidden').show().dimensions();
       var pre_position = {};
@@ -273,6 +303,7 @@ Fx.Run = new Class(Fx.Move, {
     return this.$super(position);
   }
 });
+
 /**
  * The puff visual effect
  *
@@ -287,11 +318,11 @@ Fx.Puff = new Class(Fx.Zoom, {
   
 // protected
 
-  prepare: function(how) {
-    var how = how || 'toggle', opacity = 0, size = this.options.size;
+  prepare: function(in_how) {
+    var how = in_how || 'toggle', opacity = 0, size = this.options.size, initial_style;
     
     if (how == 'out' || (how == 'toggle' && this.element.visible())) {
-      var initial_style = this.getEndPosition(this._getZoomedStyle(1));
+      initial_style = this.getEndPosition(this._getZoomedStyle(1));
       this.onFinish(function() {
         initial_style.opacity = 1;
         this.element.hide().setStyle(initial_style);
@@ -301,7 +332,7 @@ Fx.Puff = new Class(Fx.Zoom, {
       this.element.setStyle('visibility: visible').show();
       
       var width = this.element.offsetWidth;
-      var initial_style = this.getEndPosition(this._getZoomedStyle(1));
+      initial_style = this.getEndPosition(this._getZoomedStyle(1));
       
       this.onFinish(function() {
         this.element.setStyle(initial_style);
@@ -323,12 +354,13 @@ Fx.Puff = new Class(Fx.Zoom, {
   }
   
 });
+
 /**
  * Handles the to-class and from-class visual effects
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Fx.CSS = new Class(Fx.Morph, {
+Fx.Css = Fx.CSS = new Class(Fx.Morph, {
   STYLES: $w('width height lineHeight opacity border padding margin color fontSize background top left right bottom'),
   
 // protected
@@ -338,16 +370,27 @@ Fx.CSS = new Class(Fx.Morph, {
     this.removeClass = remove_class || '';
     
     // wiring the classes add/remove on-finish
-    if (add_class)    this.onFinish(this.element.addClass.bind(this.element, add_class));
-    if (remove_class) this.onFinish(this.element.removeClass.bind(this.element, remove_class));
+    if (add_class)    { this.onFinish(this.element.addClass.bind(this.element, add_class));       }
+    if (remove_class) { this.onFinish(this.element.removeClass.bind(this.element, remove_class)); }
     
     return this.$super({});
   },
   
   // hacking the old method to make it apply the classes
-  _endStyle: eval("({f:"+Fx.Morph.prototype._endStyle.toString().replace(/(\.setStyle\(\w+\))/,
-    '$1.addClass(this.addClass).removeClass(this.removeClass)'
-  )+"})").f,
+  _endStyle: function(style, keys) {
+    var element = this.element, dummy  = $(element._.cloneNode(true))
+        .setStyle('position:absolute;z-index:-1;visibility:hidden')
+        .setWidth(element.size().x)
+        .addClass(this.addClass).removeClass(this.removeClass);
+        
+    if (element._.parentNode) { element.insert(dummy, 'before'); }
+    
+    var after  = this._cloneStyle(dummy, keys);
+    
+    dummy.remove();
+    
+    return after;
+  },
   
   // replacing the old method to make it return our own list of properties
   _styleKeys: function() {
@@ -359,17 +402,18 @@ Fx.CSS = new Class(Fx.Morph, {
     return this.$super(hash);
   }
 });
+
 /**
  * Element shortcuts for the additional effects
  *
- * @copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * @copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Element.include({
+RightJS.Element.include({
   /**
    * The move visual effect shortcut
    *
-   * @param Object end position x/y or top/left
-   * @param Object fx options
+   * @param position Object end position x/y or top/left
+   * @param options Object fx options
    * @return Element self
    */
   move: function(position, options) {
@@ -423,14 +467,15 @@ Element.include({
   /**
    * The Fx.Class effect shortcut
    *
-   * @param String css-class name to add
-   * @param String css-class name to remove
+   * @param add String css-class name to add
+   * @param remove String css-class name to remove
    * @param Object fx options
    */
   morphToClass: function() {
     var args = $A(arguments);
-    if (args[0] === null) args[0] = '';
+    if (args[0] === null) { args[0] = ''; }
     
     return this.fx('CSS', args);
   }
 });
+})(RightJS);

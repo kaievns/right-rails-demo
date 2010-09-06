@@ -11,7 +11,6 @@ module ApplicationHelper
   end
   
   def link_to_remote_destroy(unit, options={})
-    link_to "Destroy", unit, options.merge(:class => "delete",
-      :onclick => "if(confirm('Are you sure?')) Xhr.load(this.href, {method: 'delete', params: 'authenticity_token=#{form_authenticity_token}'}); return false")
+    link_to "Destroy", unit, :method => :delete, :confirm => 'Are you sure?', :remote => true
   end
 end

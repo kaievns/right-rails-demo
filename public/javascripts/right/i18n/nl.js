@@ -7,8 +7,8 @@ if (self.Calendar) {
   $ext(Calendar.i18n, {
     Done:           'Klaar',
     Now:            'Nu',
-    Next:           'Volgende maand',
-    Prev:           'Vorige maand',
+    NextMonth:      'Volgende maand',
+    PrevMonth:      'Vorige maand',
     NextYear:       'Volgend jaar',
     PrevYear:       'Vorig jaar',
 
@@ -22,16 +22,16 @@ if (self.Calendar) {
 
 if (self.Lightbox) {
   $ext(Lightbox.i18n, {
-    CloseTitle: 'Sluiten',
-    PrevTitle:  'Vorige afbeelding',
-    NextTitle:  'Volgende afbeelding'
+    Close: 'Sluiten',
+    Prev:  'Vorige afbeelding',
+    Next:  'Volgende afbeelding'
   });
 }
 
 if (self.InEdit) {
   $ext(InEdit.i18n, {
-    save:   "Opslaan",
-    cancel: "Annuleren"
+    Save:   "Opslaan",
+    Cancel: "Annuleren"
   });
 }
 

@@ -1,16 +1,21 @@
 /**
  * RightJS UI Internationalization: Ukrainian module
  *
+ * Copyright (C) Maxim Golubev
  * Copyright (C) Nikolay Nemshilov
  */
 if (self.Calendar) {
+  $ext(Calendar.Options, {
+    firstDay: 0
+  });
+  
   $ext(Calendar.i18n, {
-    Done:            'Готово',
-    Now:             'Сейчас',
-    Next:            'Следующий месяц',
-    Prev:            'Предыдущий месяц',
-    NextYear:        'Следующий год',
-    PrevYear:        'Предыдущий год',
+    Done:            'Гаразд',
+    Now:             'Зараз',
+    NextMonth:       'Наступный мiсяць',
+    PrevMonth:       'Попереднiй мiсяць',
+    NextYear:        'Наступний рiк',
+    PrevYear:        'Попереднiй рiк',
 
     dayNames:        $w('Неділя Понеділок Вівторок Середа Четвер П\'ятниця Субота'),
     dayNamesShort:   $w('Ндл Пнд Втр Срд Чтв Птн Сбт'),
@@ -22,22 +27,22 @@ if (self.Calendar) {
 
 if (self.Lightbox) {
   $ext(Lightbox.i18n, {
-    CloseTitle: 'Закрыть',
-    PrevTitle:  'Предыдущее изображение',
-    NextTitle:  'Следующее изображение'
+    Close: 'Сховати',
+    Prev:  'Попереднє зображення',
+    Next:  'Наступне зображення'
   });
 }
 
 if (self.InEdit) {
   $ext(InEdit.i18n, {
-    save:   "Сохранить",
-    cancel: "Отмена"
+    Save:   "Зберегти",
+    Cancel: "Скасувати"
   });
 }
 
 if (self.Colorpicker) {
   $ext(Colorpicker.i18n, {
-    Done: 'Готово'
+    Done: 'Гаразд'
   });
 }
 

@@ -1,17 +1,31 @@
 /**
  * Drag'n'Drop module for RightJS
+ * http://rightjs.org/plugins/drag-n-drop
  *
- * See http://rightjs.org/goods/drag-n-drop
- *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-if (!RightJS) throw "Gimme RightJS";
-
+(function(window, document, RightJS) {
 /**
  * Draggable unit
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
+
+/**
+ * The DND module initialization script
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var R        = RightJS,
+    $        = RightJS.$,
+    $w       = RightJS.$w,
+    Class    = RightJS.Class,
+    isHash   = RightJS.isHash,
+    isArray  = RightJS.isArray,
+    Element  = RightJS.Element,
+    Observer = RightJS.Observer;
+
+
 var Draggable = new Class(Observer, {
   extend: {
     EVENTS: $w('before start drag stop drop'),
@@ -45,8 +59,8 @@ var Draggable = new Class(Observer, {
     rescan: function(scope) {
       var key = this.Options.relName;
       
-      ($(scope)||document).select('*[rel^="'+key+'"]').each(function(element) {
-        if (!element._draggable) {
+      ($(scope)||$(document)).select('*[rel^="'+key+'"]').each(function(element) {
+        if (!element.draggable) {
           var data = element.get('data-'+key+'-options');
           new this(element, eval('('+data+')') || {});
         }
@@ -64,7 +78,7 @@ var Draggable = new Class(Observer, {
     this.element = $(element);
     this.$super(options);
     
-    this.element._draggable = this.init();
+    this.element.draggable = this.init();
   },
   
   /**
@@ -74,7 +88,7 @@ var Draggable = new Class(Observer, {
    */
   destroy: function() {
     this.handle.stopObserving('mousedown', this._dragStart);
-    delete(this.element._draggable);
+    delete(this.element.draggable);
     
     return this;
   },
@@ -112,7 +126,7 @@ var Draggable = new Class(Observer, {
     if (this.options.revertDuration && this.element.morph) {
       this.element.morph(end_style, {
         duration: this.options.revertDuration,
-        onFinish: this.swapBack.bind(this)
+        onFinish: R(this.swapBack).bind(this)
       });
     } else {
       this.element.setStyle(end_style);
@@ -126,7 +140,7 @@ var Draggable = new Class(Observer, {
 
   init: function() {
     // caching the callback so that we could detach it later
-    this._dragStart = this.dragStart.bind(this);
+    this._dragStart = R(this.dragStart).bind(this);
     
     this.handle.onMousedown(this._dragStart);
     
@@ -138,15 +152,15 @@ var Draggable = new Class(Observer, {
     this.fire('before', this, event.stop());
     
     // calculating the positions diff
-    var position = position = this.element.position();
+    var position = this.element.position();
     
     this.xDiff = event.pageX - position.x;
     this.yDiff = event.pageY - position.y;
     
     // grabbing the relative position diffs
     var relative_position = {
-      y: this.element.getStyle('top').toFloat(),
-      x: this.element.getStyle('left').toFloat()
+      y: R(this.element.getStyle('top')).toFloat(),
+      x: R(this.element.getStyle('left')).toFloat()
     };
     
     this.rxDiff = isNaN(relative_position.x) ? 0 : (relative_position.x - position.x);
@@ -158,12 +172,12 @@ var Draggable = new Class(Observer, {
       y: this.element.getStyle('height')
     };
     
-    if (size.x == 'auto') size.x = this.element.offsetWidth  + 'px';
-    if (size.y == 'auto') size.y = this.element.offsetHeight + 'px';
+    if (size.x == 'auto') { size.x = this.element._.offsetWidth  + 'px'; }
+    if (size.y == 'auto') { size.y = this.element._.offsetHeight + 'px'; }
     
     // building a clone element if necessary
     if (this.options.clone || this.options.revert) {
-      this.clone = $(this.element.cloneNode(true)).setStyle({
+      this.clone = new Element(this.element._.cloneNode(true)).setStyle({
         visibility: this.options.clone ? 'visible' : 'hidden'
       }).insertTo(this.element, 'before');
     }
@@ -178,14 +192,18 @@ var Draggable = new Class(Observer, {
       height:   size.y
     }).addClass(this.options.dragClass);
     
-    if (this.options.moveOut) this.element.insertTo(document.body);
+    if (this.options.moveOut) {
+      this.element.insertTo(document.body);
+    }
     
     
     // caching the window scrolls
-    this.winScrolls = window.scrolls();
-    this.winSizes   = window.sizes();
+    this.winScrolls = $(window).scrolls();
+    this.winSizes   = $(window).size();
     
     Draggable.current = this.calcConstraints().fire('start', this, event);
+    
+    this.style = this.element._.style;
   },
   
   // catches the mouse move event
@@ -194,10 +212,10 @@ var Draggable = new Class(Observer, {
     
     // checking the range
     if (this.ranged) {
-      if (this.minX > x) x = this.minX;
-      if (this.maxX < x) x = this.maxX;
-      if (this.minY > y) y = this.minY;
-      if (this.maxY < y) y = this.maxY;
+      if (this.minX > x) { x = this.minX; }
+      if (this.maxX < x) { x = this.maxX; }
+      if (this.minY > y) { y = this.minY; }
+      if (this.maxY < y) { y = this.maxY; }
     }
     
     // checking the scrolls
@@ -217,23 +235,23 @@ var Draggable = new Class(Observer, {
         scrolls.x = page_x - this.winSizes.x + sensitivity;
       }
       
-      if (scrolls.y < 0) scrolls.y = 0;
-      if (scrolls.x < 0) scrolls.x = 0;
+      if (scrolls.y < 0) { scrolls.y = 0; }
+      if (scrolls.x < 0) { scrolls.x = 0; }
       
       if (scrolls.y < this.winScrolls.y || scrolls.y > this.winScrolls.y ||
         scrolls.x < this.winScrolls.x || scrolls.x > this.winScrolls.x) {
         
-          window.scrollTo(this.winScrolls = scrolls);
+          $(window).scrollTo(this.winScrolls = scrolls);
       }
     }
     
     // checking the snaps
-    if (this.snapX) x = x - x % this.snapX;
-    if (this.snapY) y = y - y % this.snapY;
+    if (this.snapX) { x = x - x % this.snapX; }
+    if (this.snapY) { y = y - y % this.snapY; }
     
     // checking the constraints
-    if (!this.axisY) this.element.style.left = (x + this.rxDiff) + 'px';
-    if (!this.axisX) this.element.style.top  = (y + this.ryDiff) + 'px';
+    if (!this.axisY) { this.style.left = (x + this.rxDiff) + 'px'; }
+    if (!this.axisX) { this.style.top  = (y + this.ryDiff) + 'px'; }
     
     this.fire('drag', this, event);
   },
@@ -257,22 +275,22 @@ var Draggable = new Class(Observer, {
   // swaps the clone element to the actual element back
   swapBack: function() {
     if (this.clone) {
-      this.clone.insert(
+      this.clone.replace(
         this.element.setStyle({
           width:    this.clone.getStyle('width'),
           height:   this.clone.getStyle('height'),
           position: this.clone.getStyle('position'),
           zIndex:   this.clone.getStyle('zIndex') || ''
-        }), 'before'
-      ).remove();
+        })
+      );
     }
   },
   
   // calculates the constraints
   calcConstraints: function() {
     var axis = this.options.axis;
-    this.axisX = ['x', 'horizontal'].include(axis);
-    this.axisY = ['y', 'vertical'].include(axis);
+    this.axisX = R(['x', 'horizontal']).include(axis);
+    this.axisY = R(['y', 'vertical']).include(axis);
     
     this.ranged = false;
     var range = this.options.range;
@@ -281,7 +299,7 @@ var Draggable = new Class(Observer, {
       
       // if the range is defined by another element
       var element = $(range);
-      if (isElement(element)) {
+      if (element instanceof Element) {
         var dims = element.dimensions();
         
         range = {
@@ -291,7 +309,7 @@ var Draggable = new Class(Observer, {
       }
 
       if (isHash(range)) {
-        var size = this.element.sizes();
+        var size = this.element.size();
         
         if (range.x) {
           this.minX = range.x[0];
@@ -307,10 +325,11 @@ var Draggable = new Class(Observer, {
     return this;
   }
 });
+
 /**
  * Droppable unit
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
 var Droppable = new Class(Observer, {
   extend: {
@@ -330,7 +349,7 @@ var Droppable = new Class(Observer, {
     },
     
     // See the Draggable rescan method, case we're kinda hijacking it in here
-    rescan: eval('({f:'+Draggable.rescan.toString().replace(/\._draggable/g, '._droppable')+'})').f,
+    rescan: eval('['+Draggable.rescan.toString().replace(/\.draggable/g, '.droppable')+']')[0],
     
     /**
      * Checks for hoverting draggable
@@ -339,8 +358,9 @@ var Droppable = new Class(Observer, {
      * @param Draggable draggable
      */
     checkHover: function(event, draggable) {
-      for (var i=0, length = this.active.length; i < length; i++)
+      for (var i=0, length = this.active.length; i < length; i++) {
         this.active[i].checkHover(event, draggable);
+      }
     },
     
     /**
@@ -350,8 +370,9 @@ var Droppable = new Class(Observer, {
      * @param Draggable draggable
      */
     checkDrop: function(event, draggable) {
-      for (var i=0, length = this.active.length; i < length; i++)
+      for (var i=0, length = this.active.length; i < length; i++) {
         this.active[i].checkDrop(event, draggable);
+      }
     },
     
     active: []
@@ -377,7 +398,7 @@ var Droppable = new Class(Observer, {
    */
   destroy: function() {
     Droppable.active = Droppable.active.without(this);
-    delete(this.element._droppable);
+    delete(this.element.droppable);
     return this;
   },
   
@@ -489,7 +510,7 @@ var Droppable = new Class(Observer, {
   // checks if the object accepts the draggable
   allows: function(draggable) {
     if (this.options.containment && !this._scanned) {
-      this.options.containment.walk($);
+      this.options.containment = R(this.options.containment).map($);
       this._scanned = true;
     }
     
@@ -500,12 +521,13 @@ var Droppable = new Class(Observer, {
   }
   
 });
+
 /**
  * The document events hooker
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-document.on({
+$(document).on({
   // parocesses the automatically discovered elements
   ready: function() {
     Draggable.rescan();
@@ -514,7 +536,7 @@ document.on({
   
   // watch the draggables moving arond
   mousemove: function(event) {
-    if (Draggable.current) {
+    if (Draggable.current !== null) {
       Draggable.current.dragProcess(event);
       Droppable.checkHover(event, Draggable.current);
     }
@@ -522,15 +544,16 @@ document.on({
   
   // releases the current draggable on mouse up
   mouseup: function(event) {
-    if (Draggable.current) {
+    if (Draggable.current !== null) {
       Draggable.current.dragStop(event);
     }
   }
 });
+
 /**
  * Element level hooks for drag'n'drops
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
 Element.include({
   
@@ -540,7 +563,10 @@ Element.include({
   },
   
   undoDraggable: function() {
-    if (this._draggable) this._draggable.destroy();
+    if ('draggable' in this) {
+      this.draggable.destroy();
+    }
+    
     return this;
   },
   
@@ -550,7 +576,15 @@ Element.include({
   },
   
   undoDroppable: function() {
-    if (this._droppable) this._droppable.destroy();
+    if ('droppable' in this) {
+      this.droppable.destroy();
+    }
+    
     return this;
   }
+  
 });
+
+window.Draggable = RightJS.Draggable = Draggable;
+window.Droppable = RightJS.Droppable = Droppable;
+})(window, document, RightJS);

@@ -11,79 +11,22 @@
  *
  *   Keep them in one place so they were more compact
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-if (Browser.OLD) {
+if (RightJS.Browser.OLD) {
   // loads DOM element extensions for selected elements
-  $ = (function(old_function) {
+  $ = RightJS.$ = (function(old_function) {
     return function(id) {
       var element = old_function(id);
       
       // old IE browses match both, ID and NAME
-      if (element !== null && isString(id) && element.id !== id) 
-        element = $$('#'+id)[0];
+      if (element && element instanceof RightJS.Element && RightJS.isString(id) && element._.id !== id) {
+        element = RightJS.$(document).first('#'+ id);
+      }
         
-      return element ? Element.prepare(element) : element;
-    }
-  })($);
-  
-  
-  $ext(document, {
-    /**
-     * Overloading the native method to extend the new elements as it is
-     * in all the other browsers
-     *
-     * @param String tag name
-     * @return Element
-     */
-    createElement: (function(old_method) {
-      return function(tag) {
-        return Element.prepare(old_method(tag));
-      }
-    })(document.createElement)
-  });
-  
-  
-  
-  $ext(Element, {
-    /**
-     * IE browsers manual elements extending
-     *
-     * @param Element
-     * @return Element
-     */
-    prepare: function(element) {
-      if (element && element.tagName && !element.set) {
-        $ext(element, Element.Methods, true);
-
-        if (window.Form) {
-          switch(element.tagName) {
-            case 'FORM':
-              Form.ext(element);
-              break;
-
-            case 'INPUT':
-            case 'SELECT':
-            case 'BUTTON':
-            case 'TEXTAREA':
-              Form.Element.ext(element);
-              break;
-          }
-        }
-      }
       return element;
-    }
-  });
-  
-  Element.include((function() {
-    var old_collect = Element.Methods.rCollect;
-    
-    return {
-      rCollect: function(attr, css_rule) {
-        return old_collect.call(this, attr, css_rule).each(Element.prepare);
-      }
-    }
-  })());
+    };
+  })(RightJS.$);
 }
 
 /**
@@ -94,47 +37,31 @@ if (Browser.OLD) {
 
 /**
  * manual position calculator, it works for Konqueror and also
- * old versions of Opera and FF, so we use a feature check in here
+ * for old versions of Opera and FF
  */
-if (!$E('p').getBoundingClientRect) {
-  Element.include({
+if (!RightJS.$E('p').getBoundingClientRect) {
+  RightJS.Element.include({
     position: function() {
-      var left = this.offsetLeft, top = this.offsetTop, position = this.getStyle('position'),
-        parent = this.parentNode, body = this.ownerDocument.body;
+      var element  = this._,
+          top      = element.offsetTop,
+          left     = element.offsetLeft,
+          parent   = element.offsetParent;
       
-      // getting the parent node position
-      while (parent && parent.tagName) {
-        if (parent === body || parent.getStyle('position') != 'static') {
-          if (parent !== body || position != 'absolute') {
-            var subset = parent.position();
-            left += subset.x;
-            top  += subset.y;
-          }
-          break;
-        }
-        parent = parent.parentNode;
+      while (parent) {
+        top  += parent.offsetTop;
+        left += parent.offsetLeft;
+        
+        parent = parent.offsetParent;
       }
       
       return {x: left, y: top};
     }
   });
-  
-  // Konq doesn't have the Form#elements reference
-  Form.include({
-    getElements: function() {
-      return this.select('input,select,textarea,button');
-    }
-  })
 }
 
 
 /**
  * The manual css-selector feature implementation
- *
- * NOTE: this will define the standard css-selectors interface
- *       with the same names as native css-selectors implementation
- *       the actual public Element level methods for the feature
- *       is in the dom/selector.js file
  *
  * Credits:
  *   - Sizzle    (http://sizzlejs.org)      Copyright (C) John Resig
@@ -143,22 +70,23 @@ if (!$E('p').getBoundingClientRect) {
  * Copyright (C) 2009-2010 Nikolay V. Nemshilov
  */
 if (!document.querySelector) {
-  Element.include((function() {
+  (function(RightJS) {
     /**
      * The token searchers collection
      */
     var search = {
       // search for any descendant nodes
       ' ': function(element, tag) {
-        return $A(element.getElementsByTagName(tag));
+        return RightJS.$A(element.getElementsByTagName(tag));
       },
 
       // search for immidate descendant nodes
       '>': function(element, tag) {
         var result = [], node = element.firstChild;
         while (node) {
-          if (tag == '*' || node.tagName == tag)
+          if (tag == '*' || node.tagName == tag) {
             result.push(node);
+          }
           node = node.nextSibling;
         }
         return result;
@@ -166,9 +94,10 @@ if (!document.querySelector) {
 
       // search for immiate sibling nodes
       '+': function(element, tag) {
-        while (element = element.nextSibling) {
-          if (element.tagName)
+        while ((element = element.nextSibling)) {
+          if (element.tagName) {
             return (tag == '*' || element.tagName == tag) ? [element] : [];
+          }
         }
         return [];
       },
@@ -176,9 +105,11 @@ if (!document.querySelector) {
       // search for late sibling nodes
       '~': function(element, tag) {
         var result = [];
-        while (element = element.nextSibling)
-          if (tag == '*' || element.tagName == tag)
+        while ((element = element.nextSibling)) {
+          if (tag == '*' || element.tagName == tag) {
             result.push(element);
+          }
+        }
         return result;
       }
     };
@@ -202,7 +133,7 @@ if (!document.querySelector) {
 
       'first-child': function(tag_name) {
         var node = this;
-        while (node = node.previousSibling) {
+        while ((node = node.previousSibling)) {
           if (node.tagName && (!tag_name || node.tagName == tag_name)) {
             return false;
           }
@@ -216,7 +147,7 @@ if (!document.querySelector) {
 
       'last-child': function(tag_name) {
         var node = this;
-        while (node = node.nextSibling) {
+        while ((node = node.nextSibling)) {
           if (node.tagName && (!tag_name || node.tagName == tag_name)) {
             return false;
           }
@@ -229,8 +160,8 @@ if (!document.querySelector) {
       },
 
       'only-child': function(tag_name, matchers) {
-        return matchers['first-child'].call(this, tag_name) 
-          && matchers['last-child'].call(this, tag_name);
+        return matchers['first-child'].call(this, tag_name) &&
+          matchers['last-child'].call(this, tag_name);
       },
 
       'only-of-type': function() {
@@ -238,15 +169,15 @@ if (!document.querySelector) {
       },
 
       'nth-child': function(number, matchers, tag_name) {
-        if (!this.parentNode) return false;
+        if (!this.parentNode) { return false; }
         number = number.toLowerCase();
 
-        if (number == 'n') return true;
+        if (number == 'n') { return true; }
 
         if (number.includes('n')) {
           // parsing out the matching expression
-          var a = b = 0;
-          if (m = number.match(/^([+-]?\d*)?n([+-]?\d*)?$/)) {
+          var a = 0, b = 0;
+          if ((m = number.match(/^([+\-]?\d*)?n([+\-]?\d*)?$/))) {
             a = m[1] == '-' ? -1 : parseInt(m[1], 10) || 1;
             b = parseInt(m[2], 10) || 0;
           }
@@ -254,13 +185,13 @@ if (!document.querySelector) {
           // getting the element index
           var index = 1, node = this;
           while ((node = node.previousSibling)) {
-            if (node.tagName && (!tag_name || node.tagName == tag_name)) index++;
+            if (node.tagName && (!tag_name || node.tagName == tag_name)) { index++; }
           }
 
-          return (index - b) % a == 0 && (index - b) / a >= 0;
+          return (index - b) % a === 0 && (index - b) / a >= 0;
 
         } else {
-          return matchers['index'].call(this, number.toInt() - 1, matchers, tag_name);
+          return matchers.index.call(this, number.toInt() - 1, matchers, tag_name);
         }
       },
 
@@ -270,22 +201,22 @@ if (!document.querySelector) {
 
     // protected
       index: function(number, matchers, tag_name) {
-        number = isString(number) ? number.toInt() : number;
+        number = RightJS.isString(number) ? number.toInt() : number;
         var node = this, count = 0;
         while ((node = node.previousSibling)) {
-          if (node.tagName && (!tag_name || node.tagName == tag_name) && ++count > number) return false;
+          if (node.tagName && (!tag_name || node.tagName == tag_name) && ++count > number) { return false; }
         }
         return count == number;
       }
     };
     
     // the regexps collection
-    var chunker   = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g;
+    var chunker   = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^\[\]]*\]|['"][^'"]*['"]|[^\[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g;
     var id_re     = /#([\w\-_]+)/;
     var tag_re    = /^[\w\*]+/;
     var class_re  = /\.([\w\-\._]+)/;
     var pseudo_re = /:([\w\-]+)(\((.+?)\))*$/;
-    var attrs_re  = /\[((?:[\w-]*:)?[\w-]+)\s*(?:([!^$*~|]?=)\s*((['"])([^\4]*?)\4|([^'"][^\]]*?)))?\]/;
+    var attrs_re  = /\[((?:[\w\-]*:)?[\w\-]+)\s*(?:([!\^$*~|]?=)\s*((['"])([^\4]*?)\4|([^'"][^\]]*?)))?\]/;
   
   /////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -298,47 +229,34 @@ if (!document.querySelector) {
      * @return Object atom matcher
      */
     var atoms_cache = {};
-    function build_atom(atom) {
-      if (!atoms_cache[atom]) {
-        //
-        // HACK HACK HACK
-        //
-        // I use those tiny variable names, case I'm gonna be nougty
-        // and generate the matching function nasty way via evals and strings
-        // and as the code will be compacted, the real variable names will be lost
-        // unless they shortified to the minimum
-        //
-        // Here what the real variable names are
-        //  i - for 'id' string
-        //  t - for 'tag' name
-        //  c - for 'classes' list
-        //  a - for 'attributes' hash
-        //  p - for 'pseudo' string
-        //  v - for 'value_of_pseudo'
-        //  
-        var i, t, c, a, p, v, m, desc = {};
+    function build_atom(in_atom) {
+      if (!atoms_cache[in_atom]) {
+        var id, tag, classes, attrs, pseudo, values_of_pseudo, match, func, desc = {}, atom = in_atom;
         
         // grabbing the attributes 
-        while(m = atom.match(attrs_re)) {
-          a = a || {};
-          a[m[1]] = { o: m[2], v: m[5] || m[6] };
-          atom = atom.replace(m[0], '');
+        while((match = atom.match(attrs_re))) {
+          attrs = attrs || {};
+          attrs[match[1]] = { o: match[2], v: match[5] || match[6] };
+          atom = atom.replace(match[0], '');
         }
         
         // extracting the pseudos
-        if (m = atom.match(pseudo_re)) {
-          p = m[1];
-          v = m[3] == '' ? null : m[3];
-          atom = atom.replace(m[0], '');
+        if ((match = atom.match(pseudo_re))) {
+          pseudo = match[1];
+          values_of_pseudo = match[3] == '' ? null : match[3];
+          atom = atom.replace(match[0], '');
         }
         
         // getting all the other options
-        i = (atom.match(id_re) || [1, null])[1];
-        t = (atom.match(tag_re) || '*').toString().toUpperCase();
-        c = (atom.match(class_re) || [1, ''])[1].split('.').without('');
+        id      = (atom.match(id_re)    || [1, null])[1];
+        tag     = (atom.match(tag_re)   || '*').toString().toUpperCase();
+        classes = (atom.match(class_re) || [1, ''])[1].split('.').without('');
         
-        desc.tag = t;
+        desc.tag = tag;
         
+        //
+        // HACK HACK HACK
+        //
         // building the matcher function
         //
         // NOTE: we kinda compile a cutom filter function in here 
@@ -346,39 +264,76 @@ if (!document.querySelector) {
         //       that will make only this atom checks and will filter
         //       a list of elements in a single call
         //
-        if (i || c.length || a || p) {
-          var filter = 'function(y){var e,r=[];for(var z=0,x=y.length;z<x;z++){e=y[z];_f_}return r}';
+        if (id || classes.length || attrs || pseudo) {
+          var filter = 'function(y){'+
+            'var e,r=[],z=0,x=y.length;'+
+            'for(;z<x;z++){'+
+              'e=y[z];_f_'+
+            '}return r}';
+            
           var patch_filter = function(code) {
             filter = filter.replace('_f_', code + '_f_');
           };
           
           // adding the ID check conditions
-          if (i) patch_filter('if(e.id!=i)continue;');
+          if (id) { patch_filter('if(e.id!=i)continue;'); }
           
           // adding the classes matching code
-          if (c.length) patch_filter(
-            'if(e.className){var n=e.className.split(" ");if(n.length==1&&c.indexOf(n[0])==-1)continue;else{for(var i=0,l=c.length,b=false;i<l;i++)if(n.indexOf(c[i])==-1){b=true;break;}if(b)continue;}}else continue;'
-          );
+          if (classes.length) { patch_filter(
+            'if(e.className){'+
+              'var n=e.className.split(" ");'+
+              'if(n.length==1&&c.indexOf(n[0])==-1)continue;'+
+              'else{'+
+                'for(var i=0,l=c.length,b=false;i<l;i++)'+
+                  'if(n.indexOf(c[i])==-1){'+
+                    'b=true;break;}'+
+                    
+              'if(b)continue;}'+
+            '}else continue;'
+          ); }
           
           // adding the attributes matching conditions
-          if (a) patch_filter(
-            'var p,o,v,b=false;for (var k in a){p=e.getAttribute(k)||"";o=a[k].o;v=a[k].v;if((o=="="&&p!=v)||(o=="*="&&!p.includes(v))||(o=="^="&&!p.startsWith(v))||(o=="$="&&!p.endsWith(v))||(o=="~="&&!p.split(" ").includes(v))||(o=="|="&&!p.split("-").includes(v))){b=true;break;}}if(b){continue;}'
-          );
+          if (attrs) { patch_filter(
+            'var p,o,v,k,b=false;'+
+            'for (k in a){p=e.getAttribute(k)||"";o=a[k].o||"";v=a[k].v||"";'+
+              'if('+
+                '(o===""&&e.getAttributeNode(k)===null)||'+
+                '(o==="="&&p!=v)||'+
+                '(o==="*="&&!p.includes(v))||'+
+                '(o==="^="&&!p.startsWith(v))||'+
+                '(o==="$="&&!p.endsWith(v))||'+
+                '(o==="~="&&!p.split(" ").includes(v))||'+
+                '(o==="|="&&!p.split("-").includes(v))'+
+              '){b=true;break;}'+
+            '}if(b){continue;}'
+          ); }
           
           // adding the pseudo matchers check
-          if (p && pseudos[p]) {
-            var s = pseudos;
-            patch_filter('if(!s[p].call(e,v,s))continue;');
+          if (pseudo in pseudos) {
+            patch_filter('if(!S[P].call(e,V,S))continue;');
           }
 
-          desc.filter = eval('['+ filter.replace('_f_', 'r.push(e)') +']')[0];
+          //
+          // HACK HACK HACK
+          //
+          // Here we separate the names space from the outside
+          // and inside of the function, so that when this thing
+          // is optimized by the code compiler, it kept the necessary
+          // variable names intackt
+          //
+          desc.filter = eval(
+            "[function(i,t,c,a,P,V,S,s){return eval('['+s+']')[0]}]"
+          )[0](
+            id,tag,classes,attrs,pseudo,values_of_pseudo,pseudos,
+            filter.replace('_f_', 'r.push(e)')
+          );
         }
         
-        atoms_cache[atom] = desc;
+        atoms_cache[in_atom] = desc;
       }
       
-      return atoms_cache[atom];
-    };
+      return atoms_cache[in_atom];
+    }
     
     /**
      * Builds a single selector out of a simple rule chunk
@@ -420,11 +375,11 @@ if (!document.querySelector) {
           var founds, sub_founds;
           
           for (var i=0, i_length = rule.length; i < i_length; i++) {
-            if (i == 0) {
+            if (i === 0) {
               founds = find_subnodes(element, rule[i]);
 
             } else {
-              if (i > 1) founds = uniq(founds);
+              if (i > 1) { founds = uniq(founds); }
 
               for (var j=0; j < founds.length; j++) {
                 sub_founds = find_subnodes(founds[j], rule[i]);
@@ -443,7 +398,7 @@ if (!document.querySelector) {
         };
       }
       return tokens_cache[rule_key];
-    };
+    }
     
     
     /**
@@ -458,7 +413,7 @@ if (!document.querySelector) {
         chunker.lastIndex = 0;
         
         var rules = [], rule = [], rel = ' ', m, token;
-        while (m = chunker.exec(css_rule)) {
+        while ((m = chunker.exec(css_rule))) {
           token = m[1];
           
           if (token == '+' || token == '>' || token == '~') {
@@ -478,7 +433,7 @@ if (!document.querySelector) {
         selectors_cache[css_rule] = rules;
       }
       return selectors_cache[css_rule];
-    };
+    }
     
     
     /**
@@ -491,13 +446,12 @@ if (!document.querySelector) {
      */
     function select_all(element, css_rule) {
       var selectors = split_rule_to_selectors(css_rule), result = [];
-      for (var i=0, length = selectors.length; i < length; i++)
+      for (var i=0, length = selectors.length; i < length; i++) {
         result = result.concat(selectors[i](element));
-      
-      if (Browser.OLD) result.forEach(Element.prepare);
+      }
       
       return result;
-    };
+    }
     
     
   /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -507,24 +461,18 @@ if (!document.querySelector) {
     // the previous dom-selection methods replacement
     var dom_extension = {
       first: function(css_rule) {
-        return this.select(css_rule).first();
+        return this.find(css_rule)[0];
       },
       
-      select: function(css_rule) {
-        return select_all(this, css_rule || '*');
+      find: function(css_rule) {
+        return select_all(this._, css_rule || '*').map(RightJS.$);
       }
     };
     
-    // replacing the document-level search methods
-    $ext(document, dom_extension);
+    dom_extension.select = dom_extension.find;
     
-    // patching the $$ function to make it more efficient
-    window.$$ = function(css_rule) {
-      return select_all(document, css_rule || '*');
-    };
-    
-    // sending the extension to the Element#include
-    return dom_extension;
-  })());
+    // hooking up the rightjs wrappers with the new methods
+    RightJS.Element.include(dom_extension);
+    RightJS.Document.include(dom_extension);
+  })(RightJS);
 }
-

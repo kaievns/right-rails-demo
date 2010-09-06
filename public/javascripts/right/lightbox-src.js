@@ -1,74 +1,256 @@
 /**
- * The lightbox widget implemented with RightJS
+ * Lightbox feature for RightJS
+ * http://rightjs.org/ui/lightbox
  *
- * Home page: http://rightjs.org/ui/lightbox
- *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-if (!RightJS) { throw "Gimme RightJS please." };
+var Lightbox = RightJS.Lightbox = (function(document, RightJS) {
+/**
+ * This module defines the basic widgets constructor
+ * it creates an abstract proxy with the common functionality
+ * which then we reuse and override in the actual widgets
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+
+/**
+ * The filenames to include
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var R       = RightJS,
+    $       = RightJS.$,
+    $$      = RightJS.$$,
+    $w      = RightJS.$w,
+    $E      = RightJS.$E,
+    $ext    = RightJS.$ext,
+    Xhr     = RightJS.Xhr,
+    Class   = RightJS.Class,
+    Object  = RightJS.Object,
+    Wrapper = RightJS.Wrapper,
+    Element = RightJS.Element,
+    Browser = RightJS.Browser;
+
+// IE6 doesn't support position:fixed so it needs a crunch
+Browser.IE6 = Browser.OLD && navigator.userAgent.indexOf("MSIE 6") > 0;
+
+
+
+
+
+
+
+/**
+ * The widget units constructor
+ *
+ * @param String tag-name or Object methods
+ * @param Object methods
+ * @return Widget wrapper
+ */ 
+function Widget(tag_name, methods) {
+  if (!methods) {
+    methods = tag_name;
+    tag_name = 'DIV';
+  }
+  
+  /**
+   * An Abstract Widget Unit
+   *
+   * Copyright (C) 2010 Nikolay Nemshilov
+   */
+  var AbstractWidget = new RightJS.Wrapper(RightJS.Element.Wrappers[tag_name] || RightJS.Element, {
+    /**
+     * The common constructor
+     *
+     * @param Object options
+     * @param String optional tag name
+     * @return void
+     */
+    initialize: function(key, options) {
+      this.key = key;
+      var args = [{'class': 'rui-' + key}];
+      
+      // those two have different constructors
+      if (!(this instanceof RightJS.Input || this instanceof RightJS.Form)) {
+        args.unshift(tag_name);
+      }
+      this.$super.apply(this, args);
+      
+      if (RightJS.isString(options)) {
+        options = RightJS.$(options);
+      }
+      
+      // if the options is another element then
+      // try to dynamically rewrap it with our widget
+      if (options instanceof RightJS.Element) {
+        this._ = options._;
+        if ('$listeners' in options) {
+          options.$listeners = options.$listeners;
+        }
+        options = {};
+      }
+      this.setOptions(options, this);
+      return this;
+    },
+
+  // protected
+
+    /**
+     * Catches the options
+     *
+     * @param Object user-options
+     * @param Element element with contextual options
+     * @return void
+     */
+    setOptions: function(options, element) {
+      element = element || this;
+      RightJS.Options.setOptions.call(this,
+        RightJS.Object.merge(options, eval("("+(
+          element.get('data-'+ this.key) || '{}'
+        )+")"))
+      );
+      return this;
+    }
+  });
+  
+  /**
+   * Creating the actual widget class
+   *
+   */
+  var Klass = new RightJS.Wrapper(AbstractWidget, methods);
+  
+  // creating the widget related shortcuts
+  RightJS.Observer.createShortcuts(Klass.prototype, Klass.EVENTS || []);
+  
+  return Klass;
+}
+
+
+/**
+ * A shared module to create textual spinners
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var Spinner = new RightJS.Wrapper(RightJS.Element, {
+  /**
+   * Constructor
+   *
+   * @param Number optional spinner size (4 by default)
+   * @return void
+   */
+  initialize: function(size) {
+    this.$super('div', {'class': 'rui-spinner'});    
+    this.dots = [];
+    
+    for (var i=0; i < (size || 4); i++) {
+      this.dots.push(new RightJS.Element('div'));
+    }
+    
+    this.dots[0].addClass('glowing');
+    this.insert(this.dots);
+    RightJS(this.shift).bind(this).periodical(300);
+  },
+  
+  /**
+   * Shifts the spinner elements
+   *
+   * @return void
+   */
+  shift: function() {
+    if (this.visible()) {
+      var dot = this.dots.pop();
+      this.dots.unshift(dot);
+      this.insert(dot, 'top');
+    }
+  }
+});
+
 /**
  * The lightbox widget
  *
- * Credits:
- *   Inspired by and monkeys the Lightbox 2 project
- *    -- http://www.huddletogether.com/projects/lightbox2/ 
- *      Copyright (C) Lokesh Dhakar
- *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
  */
-Browser.IE6 = navigator.userAgent.indexOf("MSIE 6") != -1;
-var Lightbox = new Class({
-  include: Options,
+var Lightbox = new Widget({
   
   extend: {
-    Version: "#{version}",
+    version: '2.0.0',
+    
+    EVENTS: $w('show hide load'),
     
     Options: {
-      endOpacity:      0.8,
-      fxDuration:      200,
+      fxName:          'fade',
+      fxDuration:      100,
+      
+      group:           null, // a group marker
       
       hideOnEsc:       true,
       hideOnOutClick:  true,
       showCloseButton: true,
-      blockContent:    false,
       
-      cssRule:         "a[rel^=lightbox]",             // all lightbox links css-rule
+      cssRule:         "a[data-lightbox]", // all lightbox links css-rule
       
-      mediaWidth:      425,  // video links default size
+      // video links default size
+      mediaWidth:      425,
       mediaHeight:     350
     },
     
     i18n: {
-      CloseText:  '&times;',
-      CloseTitle: 'Close',
-      PrevText:   '&lsaquo;&lsaquo;&lsaquo;',
-      PrevTitle:  'Previous Image',
-      NextText:   '&rsaquo;&rsaquo;&rsaquo;',
-      NextTitle:  'Next Image'
+      Close: 'Close',
+      Prev:  'Previous Image',
+      Next:  'Next Image'
     },
+    
+    // the supported image-urls regexp
+    Images: /\.(jpg|jpeg|gif|png|bmp)/,
     
     // media content sources
     Medias: [
       [/(http:\/\/.*?youtube\.[a-z]+)\/watch\?v=([^&]+)/,       '$1/v/$2',                      'swf'],
       [/(http:\/\/video.google.com)\/videoplay\?docid=([^&]+)/, '$1/googleplayer.swf?docId=$2', 'swf'],
       [/(http:\/\/vimeo\.[a-z]+)\/([0-9]+).*?/,                 '$1/moogaloop.swf?clip_id=$2',  'swf']
-    ],
-    
-    boxes: [],
-    
-    // DEPRECATED: we use events delegation now, there's no need to call this function any more
-    rescan: function() {}
+    ]
   },
   
   /**
    * basic constructor
    *
    * @param Object options override
+   * @param Element optional options holder
+   * @return void
    */
-  initialize: function(options) {
-    this.setOptions(options).build().connectEvents();
+  initialize: function(options, context) {
+    this
+      .$super('lightbox', {})
+      .setOptions(options, context)
+      .insert([
+        this.locker = new Locker(this.options),
+        this.dialog = new Dialog(this.options)
+      ])
+      .on({
+        close: this._close,
+        next:  this._next,
+        prev:  this._prev
+      });
+  },
+  
+  /**
+   * Extracting the rel="lightboux[groupname]" attributes
+   *
+   * @param Object options
+   * @param Element link with options
+   * @return Dialog this
+   */
+  setOptions: function(options, context) {
+    this.$super(options, context);
     
-    Lightbox.boxes.push(this);
+    if (context) {
+      var rel = context.get('rel');
+      if (rel && (rel = rel.match(/lightbox\[(.+?)\]/))) {
+        this.options.group = rel[1];
+      }
+    }
+    
+    return this;
   },
   
   /**
@@ -78,542 +260,142 @@ var Lightbox = new Class({
    * @return Lighbox self
    */
   setTitle: function(text) {
-    (function() {
-      this.caption.update(text)
-    }).bind(this).delay(this.options.fxDuration);
+    this.dialog.setTitle(text);
     
     return this;
   },
   
   /**
-   * Hides the box
+   * Shows the lightbox
    *
-   * @return Lightbox self
+   * @param String/Array... content
+   * @return Lightbox this
+   */
+  show: function(content) {
+    return this._showAnd(function() {
+      this.dialog.show(content, !content);
+    });
+  },
+  
+  /**
+   * Hides the lightbox
+   *
+   * @return Lightbox this
    */
   hide: function() {
-    this.element.hide('fade', {
-      duration: this.options.fxDuration/2,
-      onFinish: this.element.remove.bind(this.element)
+    Lightbox.current = null;
+    
+    return this.$super(this.options.fxName, {
+      duration: this.options.fxDuration/3,
+      onFinish: R(function() {
+        this.fire('hide');
+        this.remove();
+      }).bind(this)
     });
-    return this;
   },
   
   /**
-   * shows the lightbox with the content
+   * Loads up the data from url or a link
    *
-   * @param mixed content String, Element, Array, NodeList, ....
-   * @return Lightbox self
+   * @param String address or a link element
+   * @param Object Xhr options
+   * @return Lightbox this
    */
-  show: function(content, size) {
-    return this.showingSelf(function() {
-      this.lock();
-      this.content.update(content || '');
-      this.resize(size);
-    }.bind(this));
+  load: function(link, options) {
+    return this._showAnd(function() {
+      this.dialog.load(link, options);
+    });
   },
   
   /**
-   * resizes the dialogue to fit the content
+   * Resizes the content block to the given size
    *
-   * @param Object {x:.., y:..} optional end size definition
-   * @return Lightbox self
+   * @param Hash size
+   * @return Lightbox this
    */
-  resize: function(size, no_fx) {
-    this.dialog.style.top = (window.sizes().y - this.dialog.sizes().y) / 2 + 'px';
-    
-    var body_style   = this.contentSize(size);
-    var height_diff  = this.dialog.sizes().y - this.body.sizes().y;
-    var body_height  = body_style.height.toInt() || this.minBodyHeight();
-    var dialog_style = {
-      top: (this.element.sizes().y - body_height - height_diff)/2 + 'px'
-    };
-    
-    // IE6 screws with the dialog width
-    if (Browser.IE6) {
-      var padding = this.bodyWrap.getStyle('padding').toInt() > 0 ? 15 : 0;
-      this.bodyWrap.setStyle('padding: '+padding+'px');
-      
-      dialog_style.width = (body_style.width.toInt() + padding * 2) + 'px';
-    }
-    
-    if (no_fx === true) {
-      this.body.setStyle(body_style);
-      this.dialog.setStyle(dialog_style);
-      this.loading = false;
-    } else {
-      this.resizeFx(body_style, dialog_style);
-    }
-    
+  resize: function(size) {
+    this.dialog.resize(size);
     return this;
   },
   
 // protected
-  
-  // locks the body
-  lock: function() {
-    this.bodyLock.removeClass('lightbox-body-lock-transparent').removeClass('lightbox-body-lock-loading').show();
-    if (Browser.OLD) this.bodyLock.setStyle("opacity: 1");
-    return this;
+
+  // handles the 'close' event
+  _close: function(event) {
+    event.stop();
+    this.hide();
   },
   
-  // unlocks the body
-  unlock: function() {
-    if (this.options.blockContent) {
-      this.bodyLock.addClass('lightbox-body-lock-transparent');
-    } else {
-      this.bodyLock.hide();
-    }
-    return this;
+  // handles the 'prev' event
+  _prev: function(event) {
+    event.stop();
+    Pager.prev();
   },
   
-  // resize specific lock
-  resizeLock: function() {
-    this.lock().content.hide();
+  // handles the 'next' event
+  _next: function(event) {
+    event.stop();
+    Pager.next();
   },
   
-  // resize specific unlock
-  resizeUnlock: function() {
-    this.unlock().content.show('fade', {
-      duration: this.options.fxDuration/2
-    });
-    this.loading = false;
-  },
-  
-  // returns the content size hash
-  contentSize: function(size) {
-    var size = size === this.$listeners ? null : size,
-      max_width = this.element.offsetWidth * 0.8,
-      max_height = this.element.offsetHeight * 0.8;
-    
-    if (size) this.content.setStyle(size);
-    
-    size = this.content.sizes();
-    
-    return {
-      width:  (size.x > max_width  ? max_width  : size.x)+"px",
-      height: (size.y > max_height ? max_height : size.y)+"px"
-    };
-  },
-  
-  // adjusts the box size so that it closed the whole window
-  boxResize: function(resize) {
-    this.element.resize(window.sizes());
-    
-    // IE6 needs to handle the locker position and size manually
-    if (Browser.IE6) {
-      this.locker.resize(window.sizes());
-        
-      this.element.style.position = 'absolute';
-      this.element.style.top = document.documentElement.scrollTop + 'px';
-    }
-    
-    return this.resize(false, true);
-  },
-  
-  // performs an action showing the lighbox
-  showingSelf: function(callback) {
-    Lightbox.boxes.without(this).each('hide');
-    
-    if (this.element.hidden()) {
-      this.element.insertTo(document.body).show();
+  // shows the lightbox element and then calls back
+  _showAnd: function(callback) {
+    if (Lightbox.current !== this) {
+      Lightbox.current = this;
       
-      this.boxResize();
-    }
-    
-    callback();
-    
-    return this;
-  },
-  
-  // builds the basic structure
-  build: function() {
-    this.element  = this.E('lightbox').setStyle('display: none');
-    this.locker   = this.E('lightbox-locker',    this.element);
-    this.dialog   = this.E('lightbox-dialog',    this.element);
-    this.caption  = this.E('lightbox-caption',   this.dialog);
-    this.bodyWrap = this.E('lightbox-body-wrap', this.dialog);
-    this.body     = this.E('lightbox-body',      this.bodyWrap);
-    this.content  = this.E('lightbox-content',   this.body);
-    this.bodyLock = this.E('lightbox-body-lock', this.body).hide();
-    
-    // the close button if asked
-    if (this.options.showCloseButton) {
-      this.closeButton = this.E('lightbox-close-button', this.dialog)
-        .onClick(this.hide.bind(this)).update(Lightbox.i18n.CloseText).set('title', Lightbox.i18n.CloseTitle);
-    }
-    
-    if (this.options.hideOnOutClick) {
-      this.locker.onClick(this.hide.bind(this));
-    }
-    
-    document.on('mousewheel', function(e) {
-      if (this.element.visible()) {
-        e.stop();
-        this[(e.detail || -e.wheelDelta) < 0 ? 'showPrev' : 'showNext']();
+      // hidding all the hanging around lightboxes
+      $$('div.rui-lightbox').each('remove');
+      
+      this.insertTo(document.body);
+      this.dialog.show('', true);
+      
+      if (Browser.OLD) { // IE's get screwed by the transparency tricks
+        this.reposition();
+        Element.prototype.show.call(this);
+        callback.call(this);
+      } else {
+        this.setStyle('display:none');
+        Element.prototype.show.call(this, this.options.fxName, {
+          duration: this.options.fxDuration/2,
+          onFinish: R(function() {
+            callback.call(this);
+            this.fire('show');
+          }).bind(this)
+        });
       }
-    }.bind(this));
-    
-    return this;
-  },
-  
-  // connects the events handling for the box
-  connectEvents: function() {
-    if (this.options.hideOnEsc) {
-      document.onKeydown(function(event) {
-        if (event.keyCode == 27) {
-          event.stop();
-          this.hide();
-        }
-      }.bindAsEventListener(this));
+    } else {
+      callback.call(this);
     }
     
-    window.on('resize', this.boxResize.bind(this));
-    
     return this;
   },
   
-  // calculates the minimal body height
-  minBodyHeight: function() {
-    var element = $E('div', {'class': 'lightbox-body', style: 'background: none; position: absolute'}).insertTo(document.body),
-      height = element.sizes().y;
-    element.remove();
-    return height;
-  },
-  
-  // processes the resizing visual effect
-  resizeFx: function(body_style, dialog_style) {
-    this.resizeLock();
-    
-    // processing everything in a single visual effect so it looked smooth
-    var body_start_width   = this.body.sizes().x;
-    var body_end_width     = body_style.width.toInt();
-    var body_start_height  = this.body.sizes().y;
-    var body_end_height    = body_style.height.toInt();
-    var dialog_start_top   = this.dialog.style.top.toInt();
-    var dialog_end_top     = dialog_style.top.toInt();
-    var dialog_start_width = this.dialog.sizes().x;
-    var dialog_end_width   = (dialog_style.width || '0').toInt();
-    var body_style         = this.body.style;
-    var dialog_style       = this.dialog.style;
-    
-    $ext(new Fx(this.dialog, {duration: this.options.fxDuration}), {
-      render: function(delta) {
-        body_style.width  = (body_start_width  + (body_end_width  - body_start_width)  * delta) + 'px';
-        body_style.height = (body_start_height + (body_end_height - body_start_height) * delta) + 'px';
-        dialog_style.top  = (dialog_start_top  + (dialog_end_top  - dialog_start_top)  * delta) + 'px';
-        
-        if (Browser.IE6) {
-          dialog_style.width  = (dialog_start_width  + (dialog_end_width  - dialog_start_width)  * delta) + 'px';
-        }
-      }
-    }).onFinish(this.resizeUnlock.bind(this)).start();
-  },
-  
-// private
-  // elements building shortcut
-  E: function(klass, parent) {
-    var e = $E('div', {'class': klass});
-    if (parent) e.insertTo(parent);
-    return e;
+  // manually repositioning under IE6 browser
+  reposition: function() {
+    if (Browser.IE6) {
+      var win = $(window);
+      
+      this.setStyle({
+        top:      win.scrolls().y + 'px',
+        width:    win.size().x    + 'px',
+        height:   win.size().y    + 'px',
+        position: "absolute"
+      });
+    }
   }
-  
 });
 
-/**
- * Ajax loading support module
- *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
- */
-Lightbox.include((function(proto) {
-  var old_show  = proto.show;
-  var old_build = proto.build;
-  
-  return {
-    // hightjacking the links
-    show: function(content) {
-      if (content && content.href) {
-        return this.load(content.href, {
-          onComplete: function(request) {
-            this.checkTheRoad(content)
-              .setTitle(content.title)
-              .content.update(request.responseText);
-          }.bind(this)
-        });
-      } else {
-        return old_show.apply(this, arguments);
-      }
-    },
-    
-    /**
-     * Loads the url via an ajax request and assigns the box content wiht the response result
-     *
-     * NOTE: will perform a GET request by default
-     *
-     * NOTE: will just update the body content with
-     *       the response text if no onComplete or
-     *       onSuccess callbacks were set
-     *
-     * @param String url address
-     * @param Object Xhr options
-     * @return Lightbox self
-     */
-    load: function(url, options) {
-      var options = options || {};
-      
-      $w('onCreate onComplete').each(function(name) {
-        options[name] = options[name] ? isArray(options[name]) ? options[name] : [options[name]] : [];
-      });
-
-      // adding the selfupdate callback as default
-      if (options.onComplete.empty() && !options.onSuccess) {
-        options.onComplete.push(function(request) {
-          this.content.update(request.responseText);
-        }.bind(this));
-      }
-
-      options.onCreate.unshift(this.loadLock.bind(this));
-      options.onComplete.push(this.resize.bind(this));
-
-      options.method = options.method || 'get';
-
-      return this.showingSelf(Xhr.load.bind(Xhr, url, options));
-    },
-    
-  // protected
-    
-    // xhr requests loading specific lock
-    loadLock: function() {
-      this.loading = true;
-      this.lock().bodyLock.addClass('lightbox-body-lock-loading');
-      return this;
-    },
-    
-    build: function() {
-      var res = old_build.apply(this, arguments);
-      
-      // building a textual spinner
-      var spinner = this.E('lightbox-body-lock-spinner', this.bodyLock);
-      var dots    = '1234'.split('').map(function(i) {
-        return $E('div', {'class': i == 1 ? 'glow':null}).insertTo(spinner);
-      });
-      (function() {
-        var dot = dots.pop(); dot.insertTo(spinner, 'top'); dots.unshift(dot);
-      }).periodical(400);
-      
-      return res;
-    }
-  };
-})(Lightbox.prototype));
-
-/**
- * Roadtrips support module for the lightbox
- *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
- */
-Lightbox.include((function(proto) {
-  var old_show  = proto.show;
-  var old_build = proto.build;
-  var old_event = proto.connectEvents;
-  
-  return {
-    // highjacking a roadtrip content
-    show: function(content) {
-      this.roadLink = (content && content.roadtrip) ? content : null;
-      return old_show.apply(this, arguments);
-    },
-    
-    // the building process overlaping
-    build: function() {
-      var res = old_build.apply(this, arguments);
-      
-      this.prevLink = this.E('lightbox-prev-link', this.dialog).onClick(this.showPrev.bind(this))
-        .update(Lightbox.i18n.PrevText).set('title', Lightbox.i18n.PrevTitle).hide();
-      this.nextLink = this.E('lightbox-next-link', this.dialog).onClick(this.showNext.bind(this))
-        .update(Lightbox.i18n.NextText).set('title', Lightbox.i18n.NextTitle).hide();
-      
-      return res;
-    },
-    
-    // connecting the left/right arrow buttons
-    connectEvents: function() {
-      var res = old_event.apply(this, arguments);
-      
-      document.onKeydown(function(event) {
-        if (event.keyCode == 37) { event.stop(); this.showPrev(); }
-        if (event.keyCode == 39) { event.stop(); this.showNext(); }
-      }.bind(this));
-      
-      return res;
-    },
-    
-    // tries to show the previous item on the roadtrip
-    showPrev: function() {
-      if (this.hasPrev() && this.element.visible() && !this.loading) {
-        this.show(this.roadLink.roadtrip[this.roadLink.roadtrip.indexOf(this.roadLink) - 1]);
-      }
-      return this;
-    },
-
-    // tries to show the next item on the roadtrip
-    showNext: function() {
-      if (this.hasNext() && this.element.visible() && !this.loading) {
-        this.show(this.roadLink.roadtrip[this.roadLink.roadtrip.indexOf(this.roadLink) + 1]);
-      }
-      return this;
-    },
-    
-    // checks the roadtrip state and shows/hides the next/prev links
-    checkRoadtrip: function() {
-      this.prevLink[this.hasPrev() ? 'show' : 'hide']();
-      this.nextLink[this.hasNext() ? 'show' : 'hide']();
-      return this;
-    },
-
-    // checks if there is a previous image link
-    hasPrev: function() {
-      return this.roadLink && this.roadLink.roadtrip && this.roadLink.roadtrip.first() != this.roadLink;
-    },
-
-    // checks if there is a next image link
-    hasNext: function() {
-      return this.roadLink && this.roadLink.roadtrip && this.roadLink.roadtrip.last() != this.roadLink;
-    },
-    
-    // updates the roadtrip links list
-    checkTheRoad: function(link) {
-      if (isElement(link)) {
-        var rule = this.options.cssRule.split('[').last(),
-            value = link.get(rule.split('^=').first()) || '',
-            match = value.match(/\[(.+?)\]/);
-        
-        if (match) {
-          var marker = rule.split('^=').last().split(']').first();
-          link.roadtrip = $$(this.options.cssRule.replace(marker, "'"+marker+"["+match[1]+"]'"));
-        }
-      }
-      this.roadLink = link;
-      
-      return this;
-    }
-  };
-})(Lightbox.prototype));
-
-/**
- * The images displaying functionality module
- *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
- */
-Lightbox.include((function() {
-  var old_show = Lightbox.prototype.show;
-  
-  return {
-    IMAGE_FORMATS: $w('jpg jpeg gif png bmp'),
-    
-    // hightjacking the links to images and image elements
-    show: function(content) {
-      // adjusting the element class-name
-      this.element[(content && (content.tagName == 'IMG' || this.isImageUrl(content.href))) ?
-        'addClass' : 'removeClass']('lightbox-image');
-      
-      if (content && content.href && this.isImageUrl(content.href)) {
-        return this.showingSelf(function() {
-          this.checkTheRoad(content).loadLock();
-          
-          // using the iframed request to make the browser cache work
-          var image = new Image();
-          image.onload = this.updateImage.bind(this, image, content);
-          image.src = content.href;
-          
-        }.bind(this));
-      } else {
-        return old_show.apply(this, arguments);
-      }
-    },
-    
-  // protected
-    
-    // inserts the image
-    updateImage: function(image, link) {
-      this.content.update(image);
-      this.checkRoadtrip().setTitle(link.title).resize();
-    },
-    
-    // checks if the given url is an url to an image
-    isImageUrl: function(url) {
-      return this.IMAGE_FORMATS.include(String(url).toLowerCase().split('?').first().split('.').last());
-    }
-  };
-})());
-
-/**
- * This module handles media-links, like youtube, vimeo etc.
- *
- * Copyright (C) 2010 Nikolay V. Nemshilov
- */
-Lightbox.include((function(proto) {
-  var old_show = proto.show;
-  
-  var media_types = {
-    swf: [
-      'D27CDB6E-AE6D-11cf-96B8-444553540000',
-  		'http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0',
-  		'application/x-shockwave-flash'
-    ]
-  };
-  
-  // builds the actual embedded tag
-  function build_embedded(addr, type) {
-    var sizes = ' width="'+ this.options.mediaWidth + '" height="'+ this.options.mediaHeight + '"';
-    
-    return '<object classid="clsid:' + media_types[type][0] +
-      '" codebase="' + media_types[type][1] + '"'+ sizes + '>' +
-      '<param name="src" value="'+addr+'" />'+
-      '<embed src="'+ addr +'" type="'+ media_types[type][2]+'"'+ sizes + ' />' +
-    '</object>';
-  };
-  
-  // checks and builds an embedded object content if necessary
-  function build_media_content(link) {
-    if (isElement(link) && link.href) {
-      var addr = link.href;
-      
-      return Lightbox.Medias.map(function(desc) {
-        return addr.match(desc[0]) ? build_embedded.call(this, addr.replace(desc[0], desc[1]), desc[2]) : null;
-      }, this).compact()[0];
-    }
-  }
-  
-return {
-  
-  // stubbs the show method to hijack the media links
-  show: function(link) {
-    var media_content = build_media_content.call(this, link);
-    
-    this.element[media_content ? 'addClass' : 'removeClass']('lightbox-media');
-    
-    if (media_content) {
-      this.content.update(media_content);
-      return this.showingSelf(function() {
-        this
-          .checkTheRoad(link)
-          .setTitle(link.title);
-          
-      }.bind(this));
-    }
-    
-    return old_show.apply(this, arguments);
-  }
-  
-}})(Lightbox.prototype));
 
 /**
  * The class level interface
  *
- * @copyright (C) 2009 Nikolay V. Nemshilov
+ * @copyright (C) 2009 Nikolay Nemshilov
  */
 Lightbox.extend({
   hide: function() {
-    this.boxes.each('hide');
+    if (Lightbox.current) {
+      Lightbox.current.hide();
+    }
   },
   
   show: function() {
@@ -633,19 +415,467 @@ Lightbox.extend({
 });
 
 /**
- * document on-load rescan
+ * Lightbox background locker element
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2010 Nikolay Nemshilov
  */
-$(document.documentElement).onClick(function(event) {
-  var target = $(event.target);
-  var suspects = [target].concat(target.parents());
-  
-  // we chop off the HTML and BODY element from the end of the list
-  var link = suspects.slice(0, suspects.length-2).first('match', Lightbox.Options.cssRule);
-  
-  if (link) {
-    event.stop();
-    new Lightbox(eval('('+link.get('data-lightbox-options')+')')).show(link);
+var Locker = new Wrapper(Element, {
+  initialize: function(options) {
+    this.$super('div', {'class': 'rui-lightbox-locker'});
+    
+    if (options.hideOnOutClick) {
+      this.onClick('fire', 'close');
+    }
   }
-});document.write("<style type=\"text/css\">div.lightbox{position:fixed;top:0px;left:0px;width:100%;text-align:center;z-index:9999}div.ligthbox div.right-calendar{z-index:99999}div.lightbox div{line-height:normal}div.lightbox-locker{position:absolute;top:0px;left:0px;width:100%;height:100%;background-color:#000;opacity:0.84;filter:alpha(opacity=84)}div.lightbox-dialog{display:inline-block;*display:inline;*zoom:1;position:relative;text-align:left;padding-bottom:1.6em}div.lightbox-body-wrap{background-color:white;padding:1em;border-radius:.6em;-moz-border-radius:.6em;-webkit-border-radius:.6em}div.lightbox-body{position:relative;height:10em;width:10em;min-height:10em;min-width:10em;overflow:hidden;*background-color:white}div.lightbox-content{position:absolute;*background-color:white}div.lightbox-body-lock{background-color:white;position:absolute;left:0px;top:0px;width:100%;height:100%;text-align:center}div.lightbox-body-lock-spinner{display:none;position:absolute;bottom:0;right:0}div.lightbox-body-lock-spinner div{float:left;width:.5em;height:.9em;background:#AAA;margin-left:.1em;-moz-border-radius:.15em;-webkit-border-radius:.15em}div.lightbox-body-lock-spinner div.glow{background:#666;height:1em;margin-top:-0.05em}div.lightbox-body-lock-loading div.lightbox-body-lock-spinner{display:inline-block;*display:inline;*zoom:1}div.lightbox-body-lock-transparent{background:none}div.lightbox-caption{height:1.2em;margin:0 .7em;margin-bottom:.1em;white-space:nowrap;color:#DDD;font-weight:bold;font-size:1.6em;font-family:Helvetica}div.lightbox-close-button,div.lightbox-prev-link,div.lightbox-next-link{position:absolute;bottom:0;color:#888;cursor:pointer;font-size:150%;font-weight:bold;font-family:Arial}div.lightbox-close-button:hover,div.lightbox-prev-link:hover,div.lightbox-next-link:hover{color:white}div.lightbox-close-button{right:.5em}div.lightbox-prev-link,div.lightbox-next-link{padding:0 .2em;bottom:2px}div.lightbox-prev-link{left:.2em}div.lightbox-next-link{left:2em}div.lightbox-image div.lightbox-body-wrap,div.lightbox-media div.lightbox-body-wrap{padding:0;border:1px solid #777;border-radius:0px;-moz-border-radius:0px;-webkit-border-radius:0px}div.lightbox-image div.lightbox-content img{vertical-align:middle}div.lightbox-image div.lightbox-caption,div.lightbox-media div.lightbox-caption{margin-left:.2em}div.lightbox-image div.lightbox-body-wrap,div.lightbox-image div.lightbox-body-lock,div.lightbox-media div.lightbox-body-wrap,div.lightbox-media div.lightbox-body-lock{background-color:#DDD}div.lightbox-image div.lightbox-body-lock-spinner{bottom:1em;right:1em}div.lightbox-image div.lightbox-close-button{right:.2em}div.lightbox-image div.lightbox-prev-link{left:0}</style>");
+});
+
+/**
+ * The dialog element wrapper
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var Dialog = new Wrapper(Element, {
+  /**
+   * Constructor
+   *
+   * @param Object options
+   * @return void
+   */
+  initialize: function(options) {
+    var i18n = Lightbox.i18n;
+    
+    this.options = options;
+    this.$super('div', {'class': 'rui-lightbox-dialog'});
+    
+    // building up the 
+    this.insert([
+      this.title = $E('div', {'class': 'rui-lightbox-title'}),
+      
+      $E('div', {'class': 'rui-lightbox-body'}).insert(
+        $E('div', {'class': 'rui-lightbox-body-inner'}).insert([
+          this.locker    = $E('div', {'class': 'rui-lightbox-body-locker'}).insert(new Spinner(4)),
+          this.scroller  = $E('div', {'class': 'rui-lightbox-scroller'}).insert(
+            this.content = $E('div', {'class': 'rui-lightbox-content'})
+          )
+        ])
+      ),
+      
+      $E('div', {'class': 'rui-lightbox-navigation'}).insert([
+        this.closeButton = $E('div', {'class': 'close', html: '&times;', title: i18n.Close}).onClick('fire', 'close'),
+        this.prevLink    = $E('div', {'class': 'prev',  html: '&larr;',  title: i18n.Prev}).onClick('fire',  'prev'),
+        this.nextLink    = $E('div', {'class': 'next',  html: '&rarr;',  title: i18n.Next}).onClick('fire',  'next')
+      ])
+    ]);
+    
+    // presetting the navigation state
+    this.prevLink.hide();
+    this.nextLink.hide();
+    
+    if (!options.showCloseButton) {
+      this.closeButton.hide();
+    }
+  },
+  
+  /**
+   * Sets the dialogue caption
+   *
+   * @param String title
+   * @return Dialog this
+   */
+  setTitle: function(title) {
+    this.title.update(title||'');
+  },
+  
+  /**
+   * Nicely resize the dialog box
+   *
+   * @param Object the end size
+   * @param Boolean use fx (false by default)
+   * @return Dialog this
+   */
+  resize: function(end_size, with_fx) {
+    var win_size = this.parent().size(),
+        cur_size = this.scroller.size(),
+        cur_top  = (win_size.y - this.size().y)/2,
+        dlg_diff = this.size().x - cur_size.x; // <- use for IE6 fixes
+    
+    if (end_size) {
+      // getting the actual end-size
+      end_size = this.scroller.setStyle(end_size).size();
+      
+      this.scroller.setStyle({
+        width:  cur_size.x + 'px',
+        height: cur_size.y + 'px'
+      });
+    } else {
+      // using the content block size
+      end_size = this.content.size();
+    }
+    
+    // checking the constraints
+    var threshold = 100; // px
+    if ((end_size.x + threshold) > win_size.x) { end_size.x = win_size.x - threshold; }
+    if ((end_size.y + threshold) > win_size.y) { end_size.y = win_size.y - threshold; }
+    
+    // the actual resize and reposition
+    var end_top = (cur_top * 2 + cur_size.y - end_size.y) / 2;
+    var dialog  = this._.style, content = this.scroller._.style;
+    
+    if (RightJS.Fx && with_fx && (end_size.x != cur_size.x || end_size.y != cur_size.y)) {
+      
+      $ext(new RightJS.Fx(this, {duration: this.options.fxDuration, transition: 'Lin'}), {
+        render: function(delta) {
+          content.width  = (cur_size.x + (end_size.x - cur_size.x) * delta) + 'px';
+          content.height = (cur_size.y + (end_size.y - cur_size.y) * delta) + 'px';
+          dialog.top     = (cur_top    + (end_top    - cur_top)    * delta) + 'px';
+          
+          if (Browser.IE6) {
+            dialog.width  = (dlg_diff + cur_size.y + (end_size.y - cur_size.y) * delta) + 'px';
+          }
+        }
+      }).onFinish(R(this.unlock).bind(this)).start();
+      
+    } else {
+      // no-fx direct assignment
+      content.width  = end_size.x + 'px';
+      content.height = end_size.y + 'px';
+      dialog.top     = end_top    + 'px';
+      
+      if (Browser.IE6) {
+        dialog.width = (dlg_diff + end_size.x) + 'px';
+      }
+      
+      if (!this.request) { this.unlock(); }
+    }
+    
+    return this;
+  },
+  
+  /**
+   * Shows the content
+   *
+   * @param mixed content String/Element/Array and so one
+   * @return Dialog this
+   */
+  show: function(content, no_fx) {
+    this.content.update(content || '');
+    this.resize(null, !no_fx);
+  },
+  
+  /**
+   * Loads up the data from the link
+   *
+   * @param mixed String url address or a link element
+   * @param Object xhr-options
+   * @return void
+   */
+  load: function(url, options) {
+    if (url instanceof Element) {
+      this.setTitle(url.get('title'));
+      url = url.get('href');
+    }
+    
+    Pager.show(this, url);
+    this.lock().cancel();
+    
+    // defined in the loader.js file
+    this.request = new Loader(url, options, R(function(content, no_fx) {
+      this.request = null;
+      this.show(content, no_fx);
+    }).bind(this));
+    
+    return this.resize(); // the look might be changed for a media-type
+  },
+  
+  /**
+   * Cancels a currently loading request
+   *
+   * @return Dialog this
+   */
+  cancel: function() {
+    if (this.request) {
+      this.request.cancel();
+    }
+    
+    return this;
+  },
+  
+  /**
+   * Shows the loading lock
+   *
+   * @return Dialog this
+   */
+  lock: function() {
+    this.locker.setStyle('opacity:1');
+    return this;
+  },
+  
+  /**
+   * Hides the loading lock
+   *
+   * @return Dialog this
+   */
+  unlock: function() {
+    this.locker.morph({opacity: 0}, {
+      duration: this.options.fxDuration * 2/3
+    });
+    
+    return this;
+  }
+});
+
+/**
+ * Xhr/images/medias loading module
+ *
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
+ */
+var Loader = new Class({
+  /**
+   * Constructor
+   *
+   * @param String url address
+   * @param Object Xhr options
+   * @param Function on-finish callback
+   */
+  initialize: function(url, options, on_finish) {
+    // adjusting the dialog look for different media-types
+    if (this.isImage(url, on_finish)) {
+      Lightbox.current.addClass('rui-lightbox-image');
+    } else if (this.isMedia(url, on_finish)) {
+      Lightbox.current.addClass('rui-lightbox-media');
+    } else {
+      this.xhr = new Xhr(url,
+        Object.merge({method: 'get'}, options)
+      ).onComplete(function() {
+        on_finish(this.text);
+      }).send();
+    }
+  },
+  
+  /**
+   * Cancels the request
+   *
+   * @return Loader this
+   */
+  cancel: function() {
+    if (this.xhr) {
+      this.xhr.cancel();
+    } else if (this.img) {
+      this.img.onload = function() {};
+    }
+  },
+
+// protected
+  
+  // tries to initialize it as an image loading
+  isImage: function(url, on_finish) {
+    if (url.match(Lightbox.Images)) {
+      var img = this.img = $E('img')._;
+      img.onload = function() {
+        on_finish(img);
+      };
+      img.src = url;
+      return true;
+    }
+  },
+  
+  // tries to initialize it as a flash-element
+  isMedia: function(url, on_finish) {
+    var media = R(Lightbox.Medias).map(function(desc) {
+      return url.match(desc[0]) ? this.buildEmbed(
+        url.replace(desc[0], desc[1]), desc[2]) : null;
+    }, this).compact()[0];
+    
+    if (media) {
+      on_finish(media, true);
+      return true;
+    }
+  },
+  
+  // builds an embedded media block
+  buildEmbed: function(url, type) {
+    var media_types = {
+      swf: [
+        'D27CDB6E-AE6D-11cf-96B8-444553540000',
+        'http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0',
+        'application/x-shockwave-flash'
+      ]
+    },
+    options = Lightbox.current ? Lightbox.current.options : Lightbox.Options,
+    sizes = ' width="'+ options.mediaWidth + '" height="'+ options.mediaHeight + '"';
+
+    return '<object classid="clsid:' + media_types[type][0] +
+      '" codebase="' + media_types[type][1] + '"'+ sizes + '>' +
+      '<param name="src" value="'+ url +'" />'+
+      '<embed src="'+ url +'" type="'+ media_types[type][2]+'"'+ sizes + ' />' +
+    '</object>';
+  }
+  
+});
+
+/**
+ * Processes the link-groups showing things in a single Lightbox
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var Pager = {
+  /**
+   * Checks and shows the pager links on the dialog
+   *
+   * @param Dialog dialog
+   * @param String url-address
+   * @return void
+   */
+  show: function(dialog, url) {
+    if (dialog.options.group) {
+      this.dialog = dialog;
+      this.links  = this.find(dialog.options.group);
+      this.link   = this.links.first(function(link) {
+        return link.get('href') === url;
+      });
+      
+      var index = this.links.indexOf(this.link), size = this.links.length;
+      
+      dialog.prevLink[size && index > 0 ? 'show' : 'hide']();
+      dialog.nextLink[size && index < size - 1 ? 'show' : 'hide']();
+    } else {
+      this.dialog = null;
+    }
+  },
+  
+  /**
+   * Shows the prev link
+   *
+   * @return void
+   */
+  prev: function() {
+    if (this.dialog && !this.timer) {
+      var id   = this.links.indexOf(this.link),
+          link = this.links[id - 1];
+          
+      if (link) {
+        this.dialog.load(link);
+        this.timeout();
+      }
+    }
+  },
+  
+  /**
+   * Shows the next link
+   *
+   * @return void
+   */
+  next: function() {
+    if (this.dialog && !this.timer) {
+      var id   = this.links.indexOf(this.link),
+          link = this.links[id + 1];
+          
+      if (link) {
+        this.dialog.load(link);
+        this.timeout();
+      }
+    }
+  },
+  
+// private
+
+  // finding the links list
+  find: function(group) {
+    return $$('a').filter(function(link) {
+      var data = link.get('data-lightbox');
+      var rel  = link.get('rel');
+      
+      return (data && eval("("+ data + ")").group === group) ||
+        (rel && rel.indexOf('lightbox['+ group + ']') > -1);
+    });
+  },
+  
+  // having a little nap to prevent ugly quick scrolling
+  timeout: function() {
+    this.timer = R(function() {
+      Pager.timer = null;
+    }).delay(300);
+  }
+};
+
+/**
+ * document level hooks
+ *
+ * Copyright (C) 2009-2010 Nikolay Nemshilov
+ */
+
+$(document).on({
+  /**
+   * Catches clicks on the target links
+   *
+   * @param Event click
+   * @return void
+   */
+  click: function(event) {
+    var target = event.find(Lightbox.Options.cssRule) || event.find('a[rel^=lightbox]');
+    
+    if (target) {
+      event.stop();
+      new Lightbox({}, target).load(target);
+    }
+  },
+  
+  /**
+   * Catches the mousewheel event and tries to scroll
+   * the list of objects on the lightbox
+   *
+   * @param Event mousewheel
+   * @return void
+   */
+  mousewheel: function(event) {
+    if (Lightbox.current) {
+      event.stop();
+      Lightbox.current.fire((event._.detail || -event._.wheelDelta) < 0 ? 'prev' : 'next');
+    }
+  },
+  
+  /**
+   * Handles the navigation form a keyboard
+   *
+   * @param Event keydown
+   * @return void
+   */
+  keydown: function(event) {
+    var lightbox = Lightbox.current, name = ({
+      27: 'close', // Esc
+      33: 'prev',  // PageUp
+      37: 'prev',  // Left
+      38: 'prev',  // Up
+      39: 'next',  // Right
+      40: 'next',  // Down
+      34: 'next'   // PageDown
+    })[event.keyCode];
+    
+    if (lightbox && name) {
+      if (name !== 'close' || lightbox.options.hideOnEsc) {
+        event.stop();
+        lightbox.fire(name);
+      }
+    }
+  }
+});
+
+$(window).on({
+  resize: function() {
+    if (Lightbox.current) {
+      Lightbox.current.reposition();
+      Lightbox.current.dialog.resize();
+    }
+  },
+  
+  scroll: function(event) {
+    if (Lightbox.current && Browser.IE6) {
+      Lightbox.current.reposition();
+    }
+  }
+});
+
+document.write("<style type=\"text/css\">div.rui-spinner,div.rui-spinner div{margin:0;padding:0;border:none;background:none;list-style:none;font-weight:normal;float:none;display:inline-block; *display:inline; *zoom:1;border-radius:.12em;-moz-border-radius:.12em;-webkit-border-radius:.12em}div.rui-spinner{text-align:center;white-space:nowrap;background:#EEE;border:1px solid #DDD;height:1.2em;padding:0 .2em}div.rui-spinner div{width:.4em;height:70%;background:#BBB;margin-left:1px}div.rui-spinner div:first-child{margin-left:0}div.rui-spinner div.glowing{background:#777}div.rui-lightbox{position:fixed;top:0;left:0;z-index:9999;float:none;width:100%;height:100%;margin:0;padding:0;background:none;border:none;text-align:center}div.rui-lightbox-locker{position:absolute;top:0px;left:0px;width:100%;height:100%;background-color:#000;opacity:0.8;filter:alpha(opacity=80);cursor:default}div.rui-lightbox-dialog{display:inline-block; *display:inline; *zoom:1;position:relative;text-align:left}div.rui-lightbox-title{height:1.2em;margin-bottom:.1em;white-space:nowrap;color:#DDD;font-weight:bold;font-size:1.6em;font-family:Helvetica;text-shadow:#000 .05em .1em .2em}div.rui-lightbox-body{background-color:white;padding:1em;border-radius:.5em;-moz-border-radius:.5em;-webkit-border-radius:.5em;box-shadow:#000 .1em .2em 1.5em;-moz-box-shadow:#000 .1em .2em 1.5em;-webkit-box-shadow:#000 .1em .2em 1.5em}div.rui-lightbox-body-inner{position:relative}div.rui-lightbox-scroller{overflow:hidden}div.rui-lightbox-content{display:inline-block; *display:inline; *zoom:1;min-height:10em;min-width:10em;_height:10em;_width:10em}div.rui-lightbox-body-locker{background-color:white;position:absolute;left:0px;top:0px;width:100%;height:100%;z-index:999;opacity:0;filter:alpha(opacity=0)}div.rui-lightbox-body-locker div.rui-spinner{position:absolute;right:0;bottom:0;border:none;background:none;font-size:150%}div.rui-lightbox-navigation{color:#888;font-size:150%;font-family:Arial;height:1em;user-select:none;-moz-user-select:none;-webkit-user-select:none}div.rui-lightbox-navigation div{cursor:pointer;position:absolute}div.rui-lightbox-navigation div:hover{color:white}div.rui-lightbox-navigation div.next{left:2em}div.rui-lightbox-navigation div.close{right:0}div.rui-lightbox-image div.rui-lightbox-body,div.rui-lightbox-media div.rui-lightbox-body{padding:0;border:1px solid #777;border-radius:0px;-moz-border-radius:0px;-webkit-border-radius:0px}div.rui-lightbox-image div.rui-lightbox-content,div.rui-lightbox-media div.rui-lightbox-content{min-height:12em;min-width:12em;_height:12em;_width:12em}div.rui-lightbox-image div.rui-lightbox-content img{vertical-align:middle}div.rui-lightbox-image div.rui-lightbox-body,div.rui-lightbox-image div.rui-lightbox-body-locker,div.rui-lightbox-media div.rui-lightbox-body,div.rui-lightbox-media div.rui-lightbox-body-locker{background-color:#DDD}div.rui-lightbox-image div.rui-lightbox-body-locker div.rui-spinner,div.rui-lightbox-media div.rui-lightbox-body-locker div.rui-spinner{bottom:.5em;right:.5em}</style>");
+
+return Lightbox;
+})(document, RightJS);
