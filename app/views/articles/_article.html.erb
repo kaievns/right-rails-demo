@@ -27,7 +27,7 @@
   </div>
   
   <div class="actions">
-    <%= link_to "Show", article %> |
+    <%= link_to "Show", article, :class => :show %> |
     <%= link_to "Edit", edit_article_path(article), :class => :edit %> |
     <%= link_to "Delete", article, :confirm => "Are you sure?", :method => :delete, :class => :delete %>
   </div>

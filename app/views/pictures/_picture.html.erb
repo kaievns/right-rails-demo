@@ -4,7 +4,7 @@
     <%= link_to_lightbox image_tag(picture.image.url(:thmb)), picture.image.url(:medium), :roadtrip => true %>
   </div>
   <div class="actions">
-    <%= link_to 'Show', picture %> |
+    <%= link_to 'Show', picture, :class => :show %> |
     <%= link_to_remote_edit picture %> |
     <%= link_to_remote_destroy picture %>
   </div>

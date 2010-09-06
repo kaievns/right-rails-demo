@@ -11,6 +11,6 @@ module ApplicationHelper
   end
   
   def link_to_remote_destroy(unit, options={})
-    link_to "Destroy", unit, :method => :delete, :confirm => 'Are you sure?', :remote => true
+    link_to "Destroy", unit, :class => :delete, :method => :delete, :confirm => 'Are you sure?', :remote => true
   end
 end

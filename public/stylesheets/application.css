@@ -21,12 +21,6 @@ a:hover {
   color: #DE4200;
   text-decoration: underline;
 }
-a.edit {
-  color: green;
-}
-a.delete {
-  color: red;
-}
 
 /* Layout styles */
 #body {
@@ -103,6 +97,26 @@ ul#main-menu li.current {
   color: #ae2727;
   border-color: #cf9e9e;
   background-color: #e2c5c5;
+}
+
+/* Pretty links styles */
+a.new, a.back, a.show, a.edit, a.delete {
+  padding-left: 20px;
+  background: url(/images/icons/new.png) no-repeat left center;
+}                                                                                                                                                                  
+a.back {
+  background-image: url(/images/icons/back.png);
+}                                                                                                                                                                  
+a.show {
+  background-image: url(/images/icons/show.png);
+}
+a.edit {
+  color: green;
+  background-image: url(/images/icons/edit.png);
+}
+a.delete {
+  color: red;
+  background-image: url(/images/icons/delete.png);
 }
 
 /* Form basic styles */
