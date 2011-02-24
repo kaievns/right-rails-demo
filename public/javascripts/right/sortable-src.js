@@ -1,10 +1,8 @@
 /**
- * Sortable feature for RightJS
- * See http://rightjs.org/ui/sortable
+ * RightJS-UI Sortable v2.2.0
+ * http://rightjs.org/ui/sortable
  *
- * NOTE: requires the dnd-plugin
- *
- * Copyright (C) 2009-2010 Nikolay Nemshilov
+ * Copyright (C) 2009-2011 Nikolay Nemshilov
  */
 var Sortable = RightJS.Sortable = (function(document, RightJS) {
 /**
@@ -12,23 +10,8 @@ var Sortable = RightJS.Sortable = (function(document, RightJS) {
  * it creates an abstract proxy with the common functionality
  * which then we reuse and override in the actual widgets
  *
- * Copyright (C) 2010 Nikolay Nemshilov
+ * Copyright (C) 2010-2011 Nikolay Nemshilov
  */
-
-/**
- * Sortable initialization script
- *
- * Copyright (C) 2010 Nikolay Nemshilov
- */
-var R        = RightJS,
-    $        = RightJS.$,
-    $w       = RightJS.$w,
-    isString = RightJS.isString,
-    isArray  = RightJS.isArray,
-    Object   = RightJS.Object;
-
-
-
 
 /**
  * The widget units constructor
@@ -48,7 +31,7 @@ function Widget(tag_name, methods) {
    *
    * Copyright (C) 2010 Nikolay Nemshilov
    */
-  var AbstractWidget = new RightJS.Wrapper(RightJS.Element.Wrappers[tag_name] || RightJS.Element, {
+  var AbstractWidget = new RightJS.Class(RightJS.Element.Wrappers[tag_name] || RightJS.Element, {
     /**
      * The common constructor
      *
@@ -80,7 +63,8 @@ function Widget(tag_name, methods) {
         options = {};
       }
       this.setOptions(options, this);
-      return this;
+
+      return (RightJS.Wrapper.Cache[RightJS.$uid(this._)] = this);
     },
 
   // protected
@@ -93,12 +77,16 @@ function Widget(tag_name, methods) {
      * @return void
      */
     setOptions: function(options, element) {
-      element = element || this;
-      RightJS.Options.setOptions.call(this,
-        RightJS.Object.merge(options, eval("("+(
+      if (element) {
+        options = RightJS.Object.merge(options, new Function("return "+(
           element.get('data-'+ this.key) || '{}'
-        )+")"))
-      );
+        ))());
+      }
+
+      if (options) {
+        RightJS.Options.setOptions.call(this, RightJS.Object.merge(this.options, options));
+      }
+
       return this;
     }
   });
@@ -107,7 +95,7 @@ function Widget(tag_name, methods) {
    * Creating the actual widget class
    *
    */
-  var Klass = new RightJS.Wrapper(AbstractWidget, methods);
+  var Klass = new RightJS.Class(AbstractWidget, methods);
 
   // creating the widget related shortcuts
   RightJS.Observer.createShortcuts(Klass.prototype, Klass.EVENTS || []);
@@ -117,15 +105,30 @@ function Widget(tag_name, methods) {
 
 
 /**
+ * Sortable initialization script
+ *
+ * Copyright (C) 2010 Nikolay Nemshilov
+ */
+var R        = RightJS,
+    $        = RightJS.$,
+    $w       = RightJS.$w,
+    isString = RightJS.isString,
+    isArray  = RightJS.isArray,
+    Object   = RightJS.Object;
+
+
+
+
+/**
  * The Sortable unit
  *
- * Copyright (C) 2009-2010 Nikolay Nemshilov
+ * Copyright (C) 2009-2011 Nikolay Nemshilov
  */
 var Sortable = new Widget('UL', {
   extend: {
-    version: '2.0.0',
+    version: '2.2.0',
 
-    EVENTS: $w('change'),
+    EVENTS: $w('start change finish'),
 
     Options: {
       url:        null,       // the Xhr requests url address, might contain the '%{id}' placeholder
@@ -141,10 +144,27 @@ var Sortable = new Widget('UL', {
       accept:     null,       // a reference or a list of references to the other sortables between which you can drag the items
       minLength:  1,          // minimum number of items on the list when the feature works
 
+      itemCss:    'li',       // the draggable item's css rule
+      handleCss:  'li',       // the draggables handle element css rule
+
       cssRule:    '*[data-sortable]' // css-rule for automatically initializable sortables
     },
 
-    current: false // a reference to the currently active sortable
+    current: false, // a reference to the currently active sortable
+
+    /**
+     * Typecasting the list element for Sortable
+     *
+     * @param Element list
+     * @return Sortable list
+     */
+    cast: function(element) {
+      element = $(element._);
+      if (!(element instanceof Sortable)) {
+        element = new Sortable(element);
+      }
+      return element;
+    }
   },
 
   /**
@@ -158,7 +178,7 @@ var Sortable = new Widget('UL', {
     this.$super('sortable', element)
       .setOptions(options)
       .addClass('rui-sortable')
-      .on('change', this._tryXhr)
+      .on('finish', this._tryXhr)
       .on('selectstart', 'stopEvent'); // disable select under IE
   },
 
@@ -183,20 +203,26 @@ var Sortable = new Widget('UL', {
     return this;
   },
 
+  // returns a list of draggable items
+  items: function() {
+    return this.children(this.options.itemCss);
+  },
+
 // protected
 
   // starts the drag
   startDrag: function(event) {
     // don't let to drag out the last item
-    if (this.children().length <= this.options.minLength) { return; }
+    if (this.items().length <= this.options.minLength) { return; }
 
     // trying to find the list-item upon which the user pressed the mouse
-    var target = event.target, targets = R([target].concat(target.parents())),
-        item = targets[targets.indexOf(this) - 1], event_pos = event.position();
+    var item   = event.find(this.options.itemCss),
+        handle = event.find(this.options.handleCss);
 
-    if (item) {
-      this._initDrag(item, event_pos);
+    if (item && handle) {
+      this._initDrag(item, event.position());
       Sortable.current = this;
+      this.fire('start', this._evOpts(event));
     }
   },
 
@@ -229,32 +255,35 @@ var Sortable = new Widget('UL', {
       item.insert(this.item, item.prevSiblings().include(this.item) ? 'after' : 'before');
       this._findSuspects();
 
-      // sending the event
-      var list = item.parent();
-
-      if (!(list instanceof Sortable)) {
-        list = new Sortable(list);
-      }
-
-      this.fire('change', {
-        list:  list,
-        item:  this.item,
-        index: list.children().indexOf(this.item)
-      });
+      this.fire('change', this._evOpts(event, item));
     }
   },
 
   // finalizes the drag
-  finishDrag: function() {
+  finishDrag: function(event) {
     if (this.itemClone) {
       this.itemClone.remove();
       this.item.setStyle('visibility:visible');
     }
     Sortable.current = false;
+    this.fire('finish', this._evOpts(event));
+  },
+
+  // returns the event options
+  _evOpts: function(event, item) {
+    item = item || this.item;
+    var list = Sortable.cast(item.parent());
+
+    return {
+      list: list,
+      item: item,
+      event: event,
+      index: list.items().indexOf(item)
+    };
   },
 
   _initDrag: function(item, event_pos) {
-    var dims   = this.dimensions(), item_dims = item.dimensions();
+    var dims = this.dimensions(), item_dims = item.dimensions();
 
     // creating the draggable clone
     var clone = item.clone().setStyle({
@@ -292,7 +321,7 @@ var Sortable = new Widget('UL', {
   _findSuspects: function() {
     var suspects = this.suspects = R([]), item = this.item, clone = this.itemClone;
     this.options.accept.each(function(list) {
-      list.children().each(function(element) {
+      Sortable.cast(list).items().each(function(element) {
         if (element !== item && element !== clone) {
           var dims = element.dimensions();
 
@@ -357,14 +386,10 @@ var Sortable = new Widget('UL', {
  */
 $(document).on({
   mousedown: function(event) {
-    var element = event.find(Sortable.Options.cssRule);
+    var element = event.find(Sortable.Options.cssRule+",*.rui-sortable");
 
     if (element) {
-      if (!(element instanceof Sortable)) {
-        element = new Sortable(element);
-      }
-
-      element.startDrag(event);
+      Sortable.cast(element).startDrag(event);
     }
   },
 
@@ -374,9 +399,9 @@ $(document).on({
     }
   },
 
-  mouseup: function() {
+  mouseup: function(event) {
     if (Sortable.current) {
-      Sortable.current.finishDrag();
+      Sortable.current.finishDrag(event);
     }
   }
 });
@@ -388,7 +413,18 @@ $(window).onBlur(function() {
 });
 
 
-document.write("<style type=\"text/css\">.rui-sortable{user-select:none;-moz-user-select:none;-webkit-user-select:none}</style>");
+var embed_style = document.createElement('style'),                 
+    embed_rules = document.createTextNode(".rui-sortable{user-select:none;-moz-user-select:none;-webkit-user-select:none}");      
+                                                                   
+embed_style.type = 'text/css';                                     
+document.getElementsByTagName('head')[0].appendChild(embed_style); 
+                                                                   
+if(embed_style.styleSheet) {                                       
+  embed_style.styleSheet.cssText = embed_rules.nodeValue;          
+} else {                                                           
+  embed_style.appendChild(embed_rules);                            
+}                                                                  
+
 
 return Sortable;
 })(document, RightJS);

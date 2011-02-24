@@ -1,37 +1,41 @@
 /**
- * The JSON encode/decode feature for RightJS
- * See http://rightjs.org/plugins/json
+ * JSON support module v2.2.1
+ * http://rightjs.org/plugins/json
  *
- * Copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * Copyright (C) 2009-2011 Nikolay Nemshilov
  */
 var JSON = function(RightJS, window) {
  
  /**
+ * Initialization script
+ *
+ * Copyright (C) 2010-2011 Nikolay Nemshilov
+ */
+RightJS.JSON = window.JSON || {};
+
+RightJS.JSON.version = '2.2.1';
+
+
+
+/**
  * The generic JSON interface
  *
  * Credits:
  *   Based on the original JSON escaping implementation
  *     http://www.json.org/json2.js
  *
- * @copyright (C) 2009-2010 Nikolay V. Nemshilov
+ * @copyright (C) 2009-2011 Nikolay V. Nemshilov
  */
-
-/**
- * Initialization script
- *
- * Copyright (C) 2010 Nikolay Nemshilov
- */
-
 var
 
-JSON = window.JSON || {},
+JSON = RightJS.JSON,
 
 // see the original JSON decoder implementation for descriptions http://www.json.org/json2.js
 cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
 specials = {'\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"' : '\\"', '\\': '\\\\'},
 quotables = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
-  
-    
+
+
 // quotes the string
 function quote(string) {
   return string.replace(quotables, function(chr) {
@@ -101,7 +105,7 @@ if (!('parse' in JSON)) {
       if (/^[\],:{}\s]*$/.test(string.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@')
         .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']')
         .replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
-          return eval('('+string+')');
+          return new Function('return '+string)();
         }
     }
 
@@ -126,33 +130,16 @@ RightJS.$alias(JSON, {
 if (RightJS.Cookie) {
   var old_set = RightJS.Cookie.prototype.set,
       old_get = RightJS.Cookie.prototype.get;
-  
+
   RightJS.Cookie.include({
     set: function(value) {
       return old_set.call(this, JSON.stringify(value));
     },
-    
+
     get: function() {
-      return JSON.parse(old_get.call(this));
+      return JSON.parse(old_get.call(this) || 'null');
     }
   });
-}
-
-
-/**
- * Better JSON sanitizing for the Xhr requests
- *
- * Copyright (C) 2009-2010 Nikolay Nemshilov
- */
-if (RightJS.Xhr) {
-  RightJS.Xhr.prototype.sanitizedJSON = function() {
-    try {
-      return JSON.decode(this.text);
-    } catch(e) {
-      if (this.secureJSON) { throw e; }
-      return null;
-    }
-  };
 }
 
  
