@@ -1,6 +1,6 @@
 <%= form_for(@article) do |f| %>
   <%= f.error_messages %>
-  
+
   <p class="required">
     <%= f.label :name %>
     <%= f.text_field :name %>
@@ -31,11 +31,15 @@
     <%= f.label :completeness %>
     <%= f.slider :completeness, :update => 'slider-display' %><span id="slider-display"></span>%
   </p>
-  
-  
+  <p>
+    <%= f.label :tags_string, "Tags" %>
+    <%= f.tags_field :tags_string, :tags => Tag.names %>
+  </p>
+
+
   <p class="buttons">
     <%= f.submit f.object.new_record? ? 'Create' : 'Update' %>
   </p>
-  
-  
+
+
 <% end -%>
