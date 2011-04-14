@@ -7,9 +7,7 @@
   </p>
   <p class="required">
     <%= f.label :text %>
-    <%= resizable :class => 'textarea-resizable', :direction => 'bottom' do %>
-      <%= f.text_area :text, :rows => 8, :cols => 60 %>
-    <% end %>
+    <%= f.rte_field :text, :toolbar => 'basic', :rows => 8, :cols => 60 %>
   </p>
   <p class="required">
     <%= f.label :published_at %>
