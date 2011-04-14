@@ -5,11 +5,11 @@ module ApplicationHelper
       link_to(text, url, options),
       :class => request.fullpath.starts_with?(url) ? :current : nil
   end
-  
+
   def link_to_remote_edit(unit, options={})
     link_to "Edit", [:edit, unit], options.merge(:class => "edit ajax_edit")
   end
-  
+
   def link_to_remote_destroy(unit, options={})
     link_to "Destroy", unit, :class => :delete, :method => :delete, :confirm => 'Are you sure?', :remote => true
   end
