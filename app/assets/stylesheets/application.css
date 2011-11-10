@@ -66,7 +66,7 @@ a:hover {
 
 /* The main menu styles */
 ul#main-menu {
-  
+
 }
 ul#main-menu li.current {
   font-weight: bold;
@@ -102,21 +102,21 @@ ul#main-menu li.current {
 /* Pretty links styles */
 a.new, a.back, a.show, a.edit, a.delete {
   padding-left: 20px;
-  background: url(/images/icons/new.png) no-repeat left center;
-}                                                                                                                                                                  
+  background: url(/assets/icons/new.png) no-repeat left center;
+}
 a.back {
-  background-image: url(/images/icons/back.png);
-}                                                                                                                                                                  
+  background-image: url(/assets/icons/back.png);
+}
 a.show {
-  background-image: url(/images/icons/show.png);
+  background-image: url(/assets/icons/show.png);
 }
 a.edit {
   color: green;
-  background-image: url(/images/icons/edit.png);
+  background-image: url(/assets/icons/edit.png);
 }
 a.delete {
   color: red;
-  background-image: url(/images/icons/delete.png);
+  background-image: url(/assets/icons/delete.png);
 }
 
 /* Form basic styles */
@@ -275,7 +275,7 @@ div.article div.text {
   border: 1px solid #AAA;
   border-radius: .3em;
   -webkit-border-radius: .3em;
-  -moz-border-radius: .3em; 
+  -moz-border-radius: .3em;
 }
 div.article div.meta label {
   font-weight: bold;

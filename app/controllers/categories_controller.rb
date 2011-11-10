@@ -41,7 +41,7 @@ class CategoriesController < ApplicationController
   # GET /categories/1/edit
   def edit
     @category = Category.find(params[:id])
-    
+
     respond_to do |format|
       format.js  { render rjs.show_form_for(@category) }
       format.any # edit.html.erb

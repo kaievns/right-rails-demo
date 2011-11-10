@@ -1,0 +1,13 @@
+//= require right
+//= require right-olds
+//= require right/rails
+//= require right/autocompleter
+//= require right/calendar
+//= require right/slider
+//= require right/rater
+//= require right/colorpicker
+//= require right/lightbox
+//= require right/tags
+//= require right/rte
+//= require_self
+//= require_tree .
